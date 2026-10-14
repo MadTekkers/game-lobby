@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import data from "../data/connections.json";
 import { useSharedBoard, recordResult } from "../lib/shared";
-import { GameHeader, Timer, Toast, useToast, usePuzzleIndex } from "./common";
+import { PuzzleBar, GameHeader, Timer, Toast, useToast, usePuzzleIndex } from "./common";
 import { ensurePlayer } from "../lib/player";
 import { fmtTime } from "../lib/daily";
 import { confetti, beep, playerColor } from "../lib/fx";
@@ -97,6 +97,7 @@ function Connections({ idx, d, room }: { idx: number; d: string; room: string | 
   return (
     <div className="game connections">
       <GameHeader title={`Connections · ${d}`} game="connections" puzzleId={idx} room={room} status={status} peers={peers} />
+      <PuzzleBar room={room} pool={{ key: `connections-${d}`, size: LISTS[d].length, current: idx, done }} />
       <div className="strands-status"><span className="muted">Create four groups of four!</span><Timer startedAt={state.startedAt} finishedAt={state.finishedAt} /></div>
       <div className="c-board">
         {solved.map((g) => { const G = puzzle.groups[g]; return (

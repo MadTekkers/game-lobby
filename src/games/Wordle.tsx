@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ANSWERS, score, type Mark } from "./wordleLogic";
 import { usePlayerState, recordResult } from "../lib/shared";
-import { GameHeader, Timer, Toast, useToast, usePuzzleIndex } from "./common";
+import { PuzzleBar, GameHeader, Timer, Toast, useToast, usePuzzleIndex } from "./common";
 import { ensurePlayer } from "../lib/player";
 import { fmtTime } from "../lib/daily";
 import { beep, confetti, bumpStreak, CAPS } from "../lib/fx";
@@ -64,6 +64,7 @@ function Wordle({ idx, room }: { idx: number; room: string | null }) {
   return (
     <div className="game wordle">
       <GameHeader title="Wordle" game="wordle" room={room} status={status} peers={Object.keys(others)} cap={CAPS.versus} />
+      <PuzzleBar room={room} pool={{ key: "wordle", size: ANSWERS.length, current: idx, done }} />
       <div className="strands-status"><span className="muted">{MAX - state.guesses.length} guesses left</span><Timer startedAt={state.startedAt} finishedAt={state.finishedAt} /></div>
       <div className="w-grid">
         {Array.from({ length: MAX }).map((_, r) => {

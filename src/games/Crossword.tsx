@@ -3,7 +3,7 @@ import { CROSSWORDS, type CW } from "./puzzleData";
 import { supabase } from "../lib/supabase";
 import { getCrossword, pickCrossword, LEN_TO_SIZE, markPlayed } from "../lib/crosswordRepo";
 import { usePlayerState, useSharedBoard, recordResult } from "../lib/shared";
-import { GameHeader, Timer, Toast, useToast, usePuzzleIndex } from "./common";
+import { PuzzleBar, GameHeader, Timer, Toast, useToast, usePuzzleIndex } from "./common";
 import { fmtTime } from "../lib/daily";
 import { beep, confetti, bumpStreak, playerColor, CAPS } from "../lib/fx";
 
@@ -129,6 +129,7 @@ function Crossword({ cw, idx, listKey, room, mode, title, game }: { cw: CW; idx:
   return (
     <div className={`game crossword ${n >= 11 ? "wide" : ""}`}>
       <GameHeader title={title + (room ? (coop ? " · Co-op" : " · Versus") : "")} game={game} room={room} status={coop ? shared.status : solo.status} peers={coop ? shared.peers : Object.keys(others)} cap={coop ? CAPS.shared : CAPS.versus} />
+      <PuzzleBar room={room} pool={game === "crossword" ? { key: "crossword", crossword: { size: n, difficulty: cw.difficulty }, current: idx, done } : { key: listKey, size: (CROSSWORDS[listKey] || []).length, current: idx, done }} />
       <div className="strands-status"><span className="muted">{cw.difficulty}</span><Timer startedAt={state.startedAt} finishedAt={state.finishedAt} /></div>
       <div className="cw-layout">
         <div>

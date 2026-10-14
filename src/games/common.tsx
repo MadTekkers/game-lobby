@@ -62,3 +62,20 @@ export function usePuzzleIndex(len: number, params: URLSearchParams, offset = 0)
   }, [room, p, len, daily]);
   return idx;
 }
+
+import { usePuzzleRefresh, type Pool } from "../lib/refresh";
+/** "New puzzle" / "I already played this" controls; switches everyone in the room together. */
+export function PuzzleBar({ room, pool }: { room: string | null; pool: Pool }) {
+  const [toast, showToast] = useToast();
+  const { flags, newPuzzle, flagPlayed, me } = usePuzzleRefresh(room, pool, showToast);
+  const [busy, setBusy] = useState(false);
+  const go2 = async () => { setBusy(true); await newPuzzle(); setTimeout(() => setBusy(false), 1500); };
+  return (
+    <div className="puzzle-bar">
+      {flags.length > 0 && <span className="flag-note">⚠️ {flags.join(", ")} already played this one</span>}
+      {room && !flags.includes(me) && !pool.done && <button className="pill ghost sm" onClick={flagPlayed}>I already played this</button>}
+      <button className={`pill sm ${pool.done || flags.length ? "" : "ghost"}`} disabled={busy} onClick={go2}>{flags.length ? "Swap puzzle" : pool.done ? "Play another" : "New puzzle"}</button>
+      <Toast msg={toast} />
+    </div>
+  );
+}

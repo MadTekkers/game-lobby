@@ -167,3 +167,5 @@ body { background: #fff; } .masthead { background: var(--bg-neutral); border-rad
 .cw-item { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; border: 2px solid var(--line); border-radius: 10px; background: #fff; padding: 10px; text-align: left; transition: all .15s; }
 .cw-item:hover { transform: translateY(-2px); } .cw-item.on { border-color: var(--ink); box-shadow: 0 3px 0 var(--ink); background: var(--bg-neutral); }
 .diff { font-size: 12px; font-weight: 700; text-transform: uppercase; border-radius: 4px; padding: 1px 6px; } .diff.easy { background: var(--c-green); } .diff.medium { background: var(--c-yellow); } .diff.hard { background: var(--c-purple); color: #fff; }
+.puzzle-bar { position: relative; z-index: 45; display: flex; gap: 8px; justify-content: flex-end; align-items: center; flex-wrap: wrap; margin: -4px 0 8px; }
+.pill.sm { padding: 5px 12px; font-size: 13px; } .flag-note { font-size: 13px; color: #8a5a00; background: #fff4d6; border-radius: 6px; padding: 3px 8px; }

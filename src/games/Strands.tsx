@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { puzzles, matchWord, adjacent, key, ROWS, COLS, type Cell, type StrandsPuzzle } from "./strandsLogic";
 import { usePlayerState, recordResult } from "../lib/shared";
-import { GameHeader, Timer, Toast, useToast, usePuzzleIndex } from "./common";
+import { PuzzleBar, GameHeader, Timer, Toast, useToast, usePuzzleIndex } from "./common";
 import { ensurePlayer } from "../lib/player";
 import { fmtTime } from "../lib/daily";
 import { useSharedBoard } from "../lib/shared";
@@ -104,6 +104,7 @@ function Strands({ idx, p, room, mode }: { idx: number; p: StrandsPuzzle; room: 
   return (
     <div className="game strands">
       <GameHeader title={`Mini Strands${room ? (coop ? " · Co-op" : " · Versus") : ""}`} game="strands" room={room} status={status} peers={peers} cap={coop ? CAPS.shared : CAPS.versus} />
+      <PuzzleBar room={room} pool={{ key: "strands", size: puzzles.length, current: idx, done }} />
       <div className="theme-card"><div className="label">TODAY'S THEME</div><div className="theme">{p.clue}</div></div>
       <div className="strands-status">
         <span><b>{state.found.length}</b> of <b>{total}</b> theme words found</span>

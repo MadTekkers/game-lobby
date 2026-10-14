@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { BEES, wordScore, type Bee } from "./puzzleData";
 import { usePlayerState, useSharedBoard, recordResult } from "../lib/shared";
-import { GameHeader, Timer, Toast, useToast, usePuzzleIndex } from "./common";
+import { PuzzleBar, GameHeader, Timer, Toast, useToast, usePuzzleIndex } from "./common";
 import { beep, confetti, bumpStreak, playerColor, CAPS } from "../lib/fx";
 
 type S = { found: string[]; startedAt?: number; finishedAt?: number; won?: boolean; score?: number };
@@ -59,6 +59,7 @@ function BeeGame({ idx, b, room, mode }: { idx: number; b: Bee; room: string | n
   return (
     <div className="game bee">
       <GameHeader title={`Spelling Bee${room ? (coop ? " · Co-op" : " · Versus") : ""}`} game="bee" room={room} status={coop ? shared.status : solo.status} peers={coop ? shared.peers : Object.keys(others)} cap={coop ? CAPS.shared : CAPS.versus} />
+      <PuzzleBar room={room} pool={{ key: "bee", size: BEES.length, current: idx, done: !!state.finishedAt }} />
       <div className="bee-rank">
         <b>{rank}</b>
         <div className="rank-track">{RANKS.map(([r, f]) => <i key={r} className={score >= Math.ceil(f * b.max) ? "on" : ""} title={`${r}: ${Math.ceil(f * b.max)}`} />)}</div>
