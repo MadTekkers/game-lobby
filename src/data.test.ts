@@ -30,3 +30,10 @@ describe("Connections", () => {
     const w = p.groups.flatMap((g: any) => g.words); expect(w.length).toBe(16); expect(new Set(w).size).toBe(16);
   }));
 });
+// @ts-ignore
+import { makePuzzle } from "../scripts/connectionsGen.mjs";
+describe("Connections runtime generator", () => {
+  it("produces valid puzzles for the next 2 years of weeks", () => {
+    for (let id = 61; id < 61 + 730; id++) { const p = makePuzzle(id); const w = p.groups.flatMap((g: any) => g.words); expect(new Set(w).size).toBe(16); expect(p.groups.map((g: any) => g.level).sort()).toEqual([0, 1, 2, 3]); }
+  });
+});

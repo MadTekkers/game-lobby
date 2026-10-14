@@ -7,13 +7,19 @@ import { fmtTime } from "../lib/daily";
 
 type Group = { level: number; category: string; words: string[] };
 type Puzzle = { id: number; groups: Group[] };
-const PUZZLES = data as Puzzle[];
+// @ts-ignore - plain JS generator shared with scripts/
+import { makePuzzle } from "../../scripts/connectionsGen.mjs";
+import { dayIndex } from "../lib/daily";
+// Curated list, extended deterministically so a fresh puzzle set appears every week even without a redeploy.
+const base = data as Puzzle[];
+const PUZZLES: Puzzle[] = [...base];
+for (let id = base.length + 1; PUZZLES.length < dayIndex() + 14; id++) PUZZLES.push(makePuzzle(id) as Puzzle);
 type S = { solved: number[]; mistakes: number; guesses: string[]; startedAt?: number; finishedAt?: number; won?: boolean; last?: { by: string; ok: boolean; oneAway?: boolean; at: number } };
 const MAX_MISTAKES = 4;
 const COLORS = ["#f9df6d", "#a0c35a", "#b0c4ef", "#ba81c5"];
 
 export default function ConnectionsPage({ params }: { params: URLSearchParams }) {
-  const idx = usePuzzleIndex(PUZZLES.length, params, 5);
+  const idx = usePuzzleIndex(PUZZLES.length, params, 0);
   if (idx === null) return <p className="center muted">Loading puzzle…</p>;
   return <Connections key={idx} idx={idx} room={params.get("room")} />;
 }
