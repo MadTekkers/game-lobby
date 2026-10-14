@@ -18,7 +18,7 @@ function Home() {
   const [name, setName] = useState(getPlayer());
   return (
     <div className="page home">
-      <div className="masthead"><h1>Game Maker</h1><p className="muted">Daily word games — play solo or with a friend in real time.</p></div>
+      <div className="masthead"><h1>Game Lobby</h1><p className="muted">Daily word games — play solo or with a friend in real time.</p></div>
       <div className="name-row"><label>Your name <input value={name} maxLength={40} placeholder="for history & multiplayer" onChange={(e) => { setName(e.target.value); setPlayer(e.target.value); }} /></label>
         <button className="pill ghost" onClick={() => go("/history")}>History & leaderboard</button></div>
       <div className="cards">

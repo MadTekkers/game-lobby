@@ -105,7 +105,7 @@ function Wordle({ idx, room }: { idx: number; room: string | null }) {
           <button className="x" onClick={() => setClosed(true)}>×</button>
           <h2>{state.won ? "Congratulations!" : "Next time!"}</h2>
           <p>{state.won ? `Solved in ${state.guesses.length}/6` : `The word was ${answer.toUpperCase()}`}{state.startedAt && state.finishedAt ? ` · ${fmtTime(Math.round((state.finishedAt - state.startedAt) / 1000))}` : ""}</p>
-          <pre className="share">{state.guesses.map((g) => score(g, answer).map((m) => (m === "correct" ? "🟩" : m === "present" ? "🟨" : "⬜")).join("")).join("\n")}</pre>
+          <pre className="share">{`Game Lobby Wordle #${idx + 1} ${state.won ? state.guesses.length : "X"}/6\n`}{state.guesses.map((g) => score(g, answer).map((m) => (m === "correct" ? "🟩" : m === "present" ? "🟨" : "⬜")).join("")).join("\n")}</pre>
           <button className="pill" onClick={() => (location.hash = "/")}>Back to games</button>
         </div></div>
       )}

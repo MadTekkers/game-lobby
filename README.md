@@ -1,4 +1,6 @@
-# Game Maker
+# Game Lobby
+
+Live: https://game-lobby-games.vercel.app
 
 NYT-Games-style daily word games built with Vite + React + TypeScript, with real-time multiplayer on Supabase.
 

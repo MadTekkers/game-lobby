@@ -115,7 +115,7 @@ function Connections({ idx, room }: { idx: number; room: string | null }) {
           <button className="x" onClick={() => setClosed(true)}>×</button>
           <h2>{state.won ? "Perfect!" : "Next time!"}</h2>
           <p>{state.won ? `Solved with ${state.mistakes} mistake${state.mistakes === 1 ? "" : "s"}` : "Out of mistakes"}{state.startedAt && state.finishedAt ? ` · ${fmtTime(Math.round((state.finishedAt - state.startedAt) / 1000))}` : ""}</p>
-          <pre className="share">{(state.guesses || []).map((g) => g.split("|").map((w) => ["🟨", "🟩", "🟦", "🟪"][puzzle.groups.find((G) => G.words.includes(w))!.level]).join("")).join("\n")}</pre>
+          <pre className="share">{`Game Lobby Connections #${idx + 1}\n`}{(state.guesses || []).map((g) => g.split("|").map((w) => ["🟨", "🟩", "🟦", "🟪"][puzzle.groups.find((G) => G.words.includes(w))!.level]).join("")).join("\n")}</pre>
           <button className="pill" onClick={() => (location.hash = "/")}>Back to games</button>
         </div></div>
       )}
