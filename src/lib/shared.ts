@@ -51,7 +51,8 @@ export function usePlayerState<S extends Base>(game: string, puzzleId: number, i
 
 /** Connections: one shared authoritative board in rooms.state, guarded by optimistic version locking (one guess evaluated at a time),
  *  plus a broadcast/presence channel for ephemeral per-tile selection locks. */
-export function useSharedBoard<S extends Base>(game: string, puzzleId: number, initial: S, room: string | null) {
+export function useSharedBoard<S extends Base>(game: string, puzzleId: number, initial: S, room: string | null, onEvent?: (payload: any) => void) {
+  const evRef = useRef(onEvent); evRef.current = onEvent;
   const me = getPlayer() || "Anonymous";
   const lsKey = `gm_${game}_${room ?? "solo"}_${puzzleId}`;
   const [state, setLocal] = useState<S>(() => { try { const v = localStorage.getItem(lsKey); return v && !room ? JSON.parse(v) : initial; } catch { return initial; } });
@@ -80,6 +81,7 @@ export function useSharedBoard<S extends Base>(game: string, puzzleId: number, i
       .on("broadcast", { event: "select" }, ({ payload }: any) => {
         if (payload.player !== me) setLocks((l) => ({ ...l, [payload.player]: payload.words }));
       })
+      .on("broadcast", { event: "ev" }, ({ payload }: any) => { if (payload.player !== me) evRef.current?.(payload); })
       .on("presence", { event: "sync" }, () => {
         const ps = Object.keys(ch.presenceState()); setPeers(ps.filter((p) => p !== me));
         setLocks((l) => Object.fromEntries(Object.entries(l).filter(([k]) => ps.includes(k))));
@@ -109,7 +111,14 @@ export function useSharedBoard<S extends Base>(game: string, puzzleId: number, i
     version.current = data.version + 1; ref.current = next; setLocal(next); return true;
   }, [room]);
 
-  return { state, commit, status, locks, peers, broadcastSelection, me };
+  const send = useCallback((payload: any) => { chRef.current?.send({ type: "broadcast", event: "ev", payload: { ...payload, player: me } }); }, [me]);
+  /** Last-write-wins save without the version check (for high-frequency co-op edits that are also broadcast). */
+  const save = useCallback((next: S) => {
+    ref.current = next; setLocal(next);
+    if (room && supabase) supabase.from("rooms").update({ state: next, version: version.current + 1, updated_at: new Date().toISOString() }).eq("id", room).then(() => { version.current += 1; });
+  }, [room]);
+  const setLocalState = useCallback((fn: (s: S) => S) => { const n = fn(ref.current); ref.current = n; setLocal(n); }, []);
+  return { state, commit, status, locks, peers, broadcastSelection, me, send, save, setLocalState };
 }
 
 export async function recordResult(r: { room: string | null; game: string; puzzleId: number; won: boolean; mistakes: number; hints: number; seconds: number }) {

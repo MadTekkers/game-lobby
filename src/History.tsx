@@ -5,7 +5,7 @@ import { fmtTime } from "./lib/daily";
 import { getPlayer } from "./lib/player";
 
 type Row = { player: string; game: string; puzzle_id: number; won: boolean; mistakes: number; hints: number; seconds: number; created_at: string; room_id: string | null };
-const NAMES: Record<string, string> = { strands: "Mini Strands", wordle: "Wordle", connections: "Connections" };
+const NAMES: Record<string, string> = { strands: "Mini Strands", wordle: "Wordle", connections: "Connections", crossword: "Crossword", mini: "The Mini", bee: "Spelling Bee" };
 
 export default function History({ params }: { params: URLSearchParams }) {
   const room = params.get("room");
@@ -18,7 +18,7 @@ export default function History({ params }: { params: URLSearchParams }) {
     q.then(({ data }) => setRows((data as Row[]) || []));
   }, [room, mine]);
 
-  const games = ["strands", "wordle", "connections"];
+  const games = ["strands", "wordle", "connections", "crossword", "mini", "bee"];
   const board = (g: string) => (rows || []).filter((r) => r.game === g && r.won).sort((a, b) => a.seconds - b.seconds || a.mistakes - b.mistakes).slice(0, 10);
   const perPlayer = Object.values((rows || []).reduce((m: Record<string, { player: string; played: number; wins: number; total: number }>, r) => {
     const x = (m[r.player] ||= { player: r.player, played: 0, wins: 0, total: 0 }); x.played++; if (r.won) { x.wins++; x.total += r.seconds; } return m; }, {}));

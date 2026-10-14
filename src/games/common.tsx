@@ -1,27 +1,34 @@
 import { useEffect, useState } from "react";
 import { go } from "../lib/router";
-import { ensurePlayer, newRoomId } from "../lib/player";
+import { ensurePlayer } from "../lib/player";
+import { soundOn, setSound, rememberRoom, rememberPeers } from "../lib/fx";
+import { Avatar } from "../Lobby";
 import { fmtTime } from "../lib/daily";
 
-export function GameHeader({ title, game, puzzleId, room, status, peers }: { title: string; game: string; puzzleId: number; room: string | null; status: string; peers?: string[] }) {
+export function GameHeader({ title, game, room, status, peers, cap }: { title: string; game: string; puzzleId?: number; room: string | null; status: string; peers?: string[]; cap?: number }) {
   const [copied, setCopied] = useState(false);
-  const link = room ? `${location.origin}${location.pathname}#/${game}?room=${room}` : "";
-  const start = () => { ensurePlayer(); go(`/${game}?room=${newRoomId()}&p=${puzzleId}`); };
+  const [snd, setSnd] = useState(soundOn());
+  const link = location.href;
+  useEffect(() => { if (room) { ensurePlayer(); rememberRoom({ room, game, url: location.hash.slice(1) }); } }, [room]);
+  useEffect(() => { if (peers?.length) rememberPeers(peers); }, [peers?.length]);
   const copy = async () => { try { await navigator.clipboard.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { window.prompt("Copy this link", link); } };
+  const full = cap && peers ? peers.length + 1 > cap : false;
   return (
     <header className="game-header">
-      <button className="back" onClick={() => go("/")} aria-label="Home">‹ Games</button>
+      <button className="back" onClick={() => go("/")} aria-label="Home">‹ Lobby</button>
       <h1>{title}</h1>
+      <button className="icon-btn" title="Sound" onClick={() => { setSound(!snd); setSnd(!snd); }}>{snd ? "🔊" : "🔇"}</button>
       <div className="room-bar">
         {room ? (
           <>
             <span className={`dot ${status}`} title={status} /> <span className="muted">{status === "live" ? "Live" : status}</span>
-            {peers && peers.length > 0 && <span className="muted"> · with {peers.join(", ")}</span>}
+            {peers && peers.length > 0 && <span className="peer-avatars">{peers.slice(0, 8).map((p) => <Avatar key={p} name={p} size={24} />)}{peers.length > 8 && <span className="muted"> +{peers.length - 8}</span>}</span>}
+            {full && <span className="warn">Room is over its {cap}-player cap</span>}
             <button className="pill" onClick={copy}>{copied ? "Copied!" : "Copy invite link"}</button>
             <button className="pill ghost" onClick={() => go(`/history?room=${room}`)}>Session history</button>
           </>
         ) : (
-          <button className="pill" onClick={start}>Play with a friend</button>
+          <button className="pill" onClick={() => go(`/play/${game}`)}>Play with friends</button>
         )}
       </div>
     </header>
@@ -51,7 +58,7 @@ export function usePuzzleIndex(len: number, params: URLSearchParams, offset = 0)
   useEffect(() => {
     if (p !== null) { setIdx(Number(p) % len); return; }
     if (!room) { setIdx(daily); return; }
-    roomPuzzle(room).then((v) => setIdx(v ?? daily));
+    roomPuzzle(room).then((v) => setIdx(v === null ? daily : v % len));
   }, [room, p, len, daily]);
   return idx;
 }

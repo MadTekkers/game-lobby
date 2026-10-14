@@ -4,6 +4,7 @@ import { useSharedBoard, recordResult } from "../lib/shared";
 import { GameHeader, Timer, Toast, useToast, usePuzzleIndex } from "./common";
 import { ensurePlayer } from "../lib/player";
 import { fmtTime } from "../lib/daily";
+import { confetti, beep, playerColor } from "../lib/fx";
 
 type Group = { level: number; category: string; words: string[] };
 type Puzzle = { id: number; groups: Group[] };
@@ -14,23 +15,27 @@ import { dayIndex } from "../lib/daily";
 const base = data as Puzzle[];
 const PUZZLES: Puzzle[] = [...base];
 for (let id = base.length + 1; PUZZLES.length < dayIndex() + 14; id++) PUZZLES.push(makePuzzle(id) as Puzzle);
+import medium from "../data/connections-medium.json";
+import hard from "../data/connections-hard.json";
+const LISTS: Record<string, Puzzle[]> = { easy: PUZZLES, medium: medium as Puzzle[], hard: hard as Puzzle[] };
 type S = { solved: number[]; mistakes: number; guesses: string[]; startedAt?: number; finishedAt?: number; won?: boolean; last?: { by: string; ok: boolean; oneAway?: boolean; at: number } };
 const MAX_MISTAKES = 4;
 const COLORS = ["#f9df6d", "#a0c35a", "#b0c4ef", "#ba81c5"]; // NYT yellow, green, blue, purple
 
 export default function ConnectionsPage({ params }: { params: URLSearchParams }) {
-  const idx = usePuzzleIndex(PUZZLES.length, params, 0);
+  const d = LISTS[params.get("d") || "easy"] ? params.get("d") || "easy" : "easy";
+  const idx = usePuzzleIndex(LISTS[d].length, params, 0);
   if (idx === null) return <p className="center muted">Loading puzzle…</p>;
-  return <Connections key={idx} idx={idx} room={params.get("room")} />;
+  return <Connections key={d + idx} idx={idx} d={d} room={params.get("room")} />;
 }
 
 function seededShuffle<T>(a: T[], seed: number) { const r = [...a]; let s = seed; for (let i = r.length - 1; i > 0; i--) { s = (s * 1103515245 + 12345) & 0x7fffffff; const j = s % (i + 1); [r[i], r[j]] = [r[j], r[i]]; } return r; }
 
-function Connections({ idx, room }: { idx: number; room: string | null }) {
+function Connections({ idx, d, room }: { idx: number; d: string; room: string | null }) {
   useEffect(() => { if (room) ensurePlayer(); }, [room]);
-  const puzzle = PUZZLES[idx];
+  const puzzle = LISTS[d][idx];
   const init: S = { solved: [], mistakes: 0, guesses: [] };
-  const { state, commit, status, locks, peers, broadcastSelection, me } = useSharedBoard<S>("connections", idx, init, room);
+  const { state, commit, status, locks, peers, broadcastSelection, me } = useSharedBoard<S>("connections-" + d, idx, init, room);
   const solved = state.solved || [];
   const [order, setOrder] = useState(() => seededShuffle(puzzle.groups.flatMap((g) => g.words), idx + 1));
   const [sel, setSel] = useState<string[]>([]);
@@ -53,6 +58,7 @@ function Connections({ idx, room }: { idx: number; room: string | null }) {
     if (l.by !== me) showToast(l.ok ? `${l.by} found a group!` : l.oneAway ? `${l.by}: one away…` : `${l.by} made a mistake`);
   }, [state.last?.at]);
   useEffect(() => {
+    if (state.finishedAt && state.startedAt) { if (state.won) confetti(); else beep("bad"); }
     if (state.finishedAt && state.startedAt) recordResult({ room, game: "connections", puzzleId: idx, won: !!state.won, mistakes: state.mistakes, hints: 0, seconds: Math.round((state.finishedAt - state.startedAt) / 1000) });
   }, [state.finishedAt]);
 
@@ -84,13 +90,13 @@ function Connections({ idx, room }: { idx: number; room: string | null }) {
     });
     setBusy(false);
     if (!ok) { showToast("Someone else just guessed — try again"); return; }
-    if (gi >= 0) { setSel([]); }
-    else { setShake(true); setTimeout(() => setShake(false), 500); showToast(puzzle.groups.some((g) => sel.filter((w) => g.words.includes(w)).length === 3) ? "One away..." : "Not quite"); }
+    if (gi >= 0) { setSel([]); beep("good"); }
+    else { beep("bad"); setShake(true); setTimeout(() => setShake(false), 500); showToast(puzzle.groups.some((g) => sel.filter((w) => g.words.includes(w)).length === 3) ? "One away..." : "Not quite"); }
   }
 
   return (
     <div className="game connections">
-      <GameHeader title="Connections" game="connections" puzzleId={idx} room={room} status={status} peers={peers} />
+      <GameHeader title={`Connections · ${d}`} game="connections" puzzleId={idx} room={room} status={status} peers={peers} />
       <div className="strands-status"><span className="muted">Create four groups of four!</span><Timer startedAt={state.startedAt} finishedAt={state.finishedAt} /></div>
       <div className="c-board">
         {solved.map((g) => { const G = puzzle.groups[g]; return (
@@ -98,7 +104,7 @@ function Connections({ idx, room }: { idx: number; room: string | null }) {
         <div className="c-grid">
           {remaining.map((w) => {
             const s = sel.includes(w); const other = lockedBy.get(w);
-            return <button key={w} className={`c-tile ${s ? "sel" : ""} ${other ? "locked" : ""} ${s && shake ? "shake" : ""} ${s && jump ? "jump" : ""}`} style={s && jump ? { animationDelay: `${sel.indexOf(w) * 90}ms` } : undefined}
+            return <button key={w} style={other ? { background: playerColor(other) + "33", boxShadow: `inset 0 0 0 3px ${playerColor(other)}` } : s && jump ? { animationDelay: `${sel.indexOf(w) * 90}ms` } : undefined} className={`c-tile ${s ? "sel" : ""} ${other ? "locked" : ""} ${s && shake ? "shake" : ""} ${s && jump ? "jump" : ""}`}
               onClick={() => toggle(w)} title={other ? `Selected by ${other}` : undefined}>{w}{other && <small>{other}</small>}</button>;
           })}
         </div>

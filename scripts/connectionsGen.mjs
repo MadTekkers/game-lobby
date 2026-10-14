@@ -1,8 +1,8 @@
 // Pure deterministic Connections generator (used by the build-time script and at runtime in the app).
 import {bank as raw} from './connectionsBank.mjs';
-const bank=raw.filter(b=>b[2].length>=4);
+const defaultBank=raw.filter(b=>b[2].length>=4);
 function rng(s){return()=>{s=(s*1103515245+12345)&0x7fffffff;return s/0x7fffffff}}
-export function makePuzzle(seed){const r=rng(seed*7919+13);const pick=a=>a[Math.floor(r()*a.length)];
+export function makePuzzle(seed,bank=defaultBank){bank=bank.filter(b=>b[2].length>=4);const r=rng(seed*7919+13);const pick=a=>a[Math.floor(r()*a.length)];
  for(let t=0;t<500;t++){const groups=[];const used=new Set();let ok=true;
   for(let lvl=0;lvl<4;lvl++){const cats=bank.filter(b=>b[0]===lvl&&!groups.some(g=>g.category===b[1]));const c=pick(cats);
    const words=[...c[2]].sort(()=>r()-.5).filter(w=>!used.has(w)).slice(0,4);

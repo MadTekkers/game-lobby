@@ -4,6 +4,8 @@ import { usePlayerState, recordResult } from "../lib/shared";
 import { GameHeader, Timer, Toast, useToast, usePuzzleIndex } from "./common";
 import { ensurePlayer } from "../lib/player";
 import { fmtTime } from "../lib/daily";
+import { useSharedBoard } from "../lib/shared";
+import { beep, confetti, bumpStreak, playerColor, CAPS } from "../lib/fx";
 
 type S = { found: string[]; hints: string[]; startedAt?: number; finishedAt?: number; won?: boolean };
 const MAX_HINTS = 3;
@@ -11,13 +13,26 @@ const MAX_HINTS = 3;
 export default function StrandsPage({ params }: { params: URLSearchParams }) {
   const idx = usePuzzleIndex(puzzles.length, params);
   if (idx === null) return <p className="center muted">Loading puzzle…</p>;
-  return <Strands key={idx} idx={idx} p={puzzles[idx]} room={params.get("room")} />;
+  const room = params.get("room"); const mode = room ? params.get("mode") || "versus" : "solo";
+  return <Strands key={idx} idx={idx} p={puzzles[idx]} room={room} mode={mode} />;
 }
 
-function Strands({ idx, p, room }: { idx: number; p: StrandsPuzzle; room: string | null }) {
+function Strands({ idx, p, room, mode }: { idx: number; p: StrandsPuzzle; room: string | null; mode: string }) {
   useEffect(() => { if (room) ensurePlayer(); }, [room]);
-  const { state, update, others, status } = usePlayerState<S>("strands", idx, { found: [], hints: [] }, room);
   const [path, setPath] = useState<Cell[]>([]);
+  const coop = mode === "coop";
+  const solo = usePlayerState<S>("strands", idx, { found: [], hints: [] }, coop ? null : room);
+  const shared = useSharedBoard<S>("strands-coop", idx, { found: [], hints: [] }, coop ? room : null);
+  const others = coop ? {} : solo.others;
+  const status = coop ? shared.status : solo.status;
+  const norm = (x: Partial<S>): S => ({ ...x, found: x.found || [], hints: x.hints || [] });
+  const state: S = coop ? norm(shared.state) : solo.state;
+  const update = (fn: (s: S) => S) => {
+    if (!coop) return solo.update(fn);
+    (async () => { for (let i = 0; i < 4; i++) if (await shared.commit((s) => fn(norm(s)))) return; })();
+  };
+  const peers = coop ? shared.peers : Object.keys(others);
+  useEffect(() => { if (coop) shared.broadcastSelection(path.map(key)); }, [path]);
   const [shake, setShake] = useState(false);
   const [pop, setPop] = useState<string | null>(null);
   const [toast, showToast] = useToast();
@@ -35,9 +50,9 @@ function Strands({ idx, p, room }: { idx: number; p: StrandsPuzzle; room: string
     setPath([]);
     if (cur.length < 3) { if (cur.length > 1) showToast("Too short"); return; }
     const w = matchWord(p, cur);
-    if (!w) { setShake(true); setTimeout(() => setShake(false), 450); showToast("Not in word list"); return; }
+    if (!w) { beep("bad"); setShake(true); setTimeout(() => setShake(false), 450); showToast("Not in word list"); return; }
     if (state.found.includes(w)) { showToast("Already found"); return; }
-    setPop(w); setTimeout(() => setPop(null), 700);
+    setPop(w); setTimeout(() => setPop(null), 700); beep("good");
     showToast(w === p.spangram ? "SPANGRAM!" : "Nice!");
     update((s) => {
       const found = [...s.found, w]; const now = Date.now();
@@ -46,6 +61,7 @@ function Strands({ idx, p, room }: { idx: number; p: StrandsPuzzle; room: string
     });
   }
   useEffect(() => {
+    if (state.finishedAt && Date.now() - state.finishedAt < 15000) { confetti(); bumpStreak("strands"); }
     if (state.finishedAt && state.startedAt) recordResult({ room, game: "strands", puzzleId: idx, won: true, mistakes: 0, hints: state.hints.length, seconds: Math.round((state.finishedAt - state.startedAt) / 1000) });
   }, [state.finishedAt]);
 
@@ -87,17 +103,19 @@ function Strands({ idx, p, room }: { idx: number; p: StrandsPuzzle; room: string
 
   return (
     <div className="game strands">
-      <GameHeader title="Mini Strands" game="strands" puzzleId={idx} room={room} status={status} peers={Object.keys(others)} />
+      <GameHeader title={`Mini Strands${room ? (coop ? " · Co-op" : " · Versus") : ""}`} game="strands" room={room} status={status} peers={peers} cap={coop ? CAPS.shared : CAPS.versus} />
       <div className="theme-card"><div className="label">TODAY'S THEME</div><div className="theme">{p.clue}</div></div>
       <div className="strands-status">
         <span><b>{state.found.length}</b> of <b>{total}</b> theme words found</span>
         <Timer startedAt={state.startedAt} finishedAt={state.finishedAt} />
       </div>
       <div className={`current-word ${shake ? "shake" : ""}`}>{word || "\u00a0"}</div>
+      {coop && Object.entries(shared.locks).filter(([, ks]) => ks.length).map(([pl, ks]) => <div key={pl} className="peer-word" style={{ color: playerColor(pl) }}>{pl}: {ks.map((k) => { const [r, c] = k.split(",").map(Number); return p.grid[r][c]; }).join("")}</div>)}
       <div className="strands-board" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={onUp} style={{ touchAction: "none" }}>
         <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="strands-lines">
           {state.found.map((w) => lines(p.paths[w], w === p.spangram ? "ln span" : "ln found", w))}
           {lines(path, "ln sel", "sel")}
+          {coop && Object.entries(shared.locks).map(([pl, ks]) => <g key={pl} style={{ stroke: playerColor(pl), opacity: 0.6 }}>{lines(ks.map((k) => k.split(",").map(Number) as Cell), "ln peer", pl)}</g>)}
         </svg>
         {Array.from({ length: ROWS }).map((_, r) => Array.from({ length: COLS }).map((_, c) => {
           const k = `${r},${c}`; const w = owner.get(k); const sel = path.some((x) => key(x) === k);
@@ -112,19 +130,17 @@ function Strands({ idx, p, room }: { idx: number; p: StrandsPuzzle; room: string
       </div>
       <p className="muted small center">Drag across letters, or tap letters and tap the last one again to submit. Diagonals count. The <span className="span-txt">spangram</span> touches two opposite sides.</p>
       {Object.entries(others).length > 0 && (
-        <div className="opponents">
-          {Object.entries(others).map(([name, o]) => (
-            <div className="opp" key={name}>
-              <div className="opp-name">{name}</div>
-              <div className="opp-mini strands-mini">
-                {Array.from({ length: ROWS * COLS }).map((_, i) => {
-                  const r = Math.floor(i / COLS), c = i % COLS; const w = (o.found || []).find((fw) => p.paths[fw]?.some((x) => x[0] === r && x[1] === c));
-                  return <i key={i} className={w ? (w === p.spangram ? "span" : "found") : ""} />;
-                })}
-              </div>
-              <div className="muted small">{(o.found || []).length}/{total} found{o.finishedAt && o.startedAt ? ` · done in ${fmtTime(Math.round((o.finishedAt - o.startedAt) / 1000))}` : ""}</div>
+        <div className="leaderboard">
+          <h3>Live standings</h3>
+          {[["You", state] as [string, S], ...Object.entries(others)].sort((x, y) => (y[1].found?.length || 0) - (x[1].found?.length || 0) || ((x[1].finishedAt || 9e15) - (x[1].startedAt || 0)) - ((y[1].finishedAt || 9e15) - (y[1].startedAt || 0))).map(([name, o], i) => (
+            <div className="lb-row" key={name}>
+              <span className="lb-rank">{i + 1}</span><span className="avatar sm" style={{ background: playerColor(name) }}>{name.slice(0, 1).toUpperCase()}</span>
+              <span className="lb-name">{name}</span>
+              <span className="lb-bar"><i style={{ width: `${((o.found?.length || 0) / total) * 100}%`, background: playerColor(name) }} /></span>
+              <span className="muted small">{o.found?.length || 0}/{total}{(o.found || []).includes(p.spangram) ? " · ⭐ spangram" : ""}{o.finishedAt && o.startedAt ? ` · ${fmtTime(Math.round((o.finishedAt - o.startedAt) / 1000))}` : ""}</span>
             </div>
           ))}
+          <p className="muted small">Opponents' words stay hidden — only their progress is shared.</p>
         </div>
       )}
       {done && !closed && (

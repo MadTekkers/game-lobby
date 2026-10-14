@@ -4,6 +4,7 @@ import { usePlayerState, recordResult } from "../lib/shared";
 import { GameHeader, Timer, Toast, useToast, usePuzzleIndex } from "./common";
 import { ensurePlayer } from "../lib/player";
 import { fmtTime } from "../lib/daily";
+import { beep, confetti, bumpStreak, CAPS } from "../lib/fx";
 
 type S = { guesses: string[]; startedAt?: number; finishedAt?: number; won?: boolean };
 const MAX = 6;
@@ -45,13 +46,14 @@ function Wordle({ idx, room }: { idx: number; room: string | null }) {
     if (done) return;
     if (k === "enter") return submit();
     if (k === "back") return setCur((c) => c.slice(0, -1));
-    if (/^[a-z]$/.test(k)) setCur((c) => (c.length < 5 ? c + k : c));
+    if (/^[a-z]$/.test(k)) { beep("tap"); setCur((c) => (c.length < 5 ? c + k : c)); }
   }, [done, submit]);
   useEffect(() => {
     const f = (e: KeyboardEvent) => { if (e.metaKey || e.ctrlKey || e.altKey) return; const k = e.key.toLowerCase(); press(k === "backspace" ? "back" : k); };
     window.addEventListener("keydown", f); return () => window.removeEventListener("keydown", f);
   }, [press]);
   useEffect(() => {
+    if (state.finishedAt && Date.now() - state.finishedAt < 15000) { if (state.won) { setTimeout(confetti, 1800); bumpStreak("wordle"); } }
     if (state.finishedAt && state.startedAt) recordResult({ room, game: "wordle", puzzleId: idx, won: !!state.won, mistakes: state.guesses.length, hints: 0, seconds: Math.round((state.finishedAt - state.startedAt) / 1000) });
   }, [state.finishedAt]);
 
@@ -61,7 +63,7 @@ function Wordle({ idx, room }: { idx: number; room: string | null }) {
 
   return (
     <div className="game wordle">
-      <GameHeader title="Wordle" game="wordle" puzzleId={idx} room={room} status={status} peers={Object.keys(others)} />
+      <GameHeader title="Wordle" game="wordle" room={room} status={status} peers={Object.keys(others)} cap={CAPS.versus} />
       <div className="strands-status"><span className="muted">{MAX - state.guesses.length} guesses left</span><Timer startedAt={state.startedAt} finishedAt={state.finishedAt} /></div>
       <div className="w-grid">
         {Array.from({ length: MAX }).map((_, r) => {

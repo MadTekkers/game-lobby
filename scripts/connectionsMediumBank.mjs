@@ -1,0 +1,28 @@
+// Medium: trivia & pop-culture categories (curated, original). Overlapping members (e.g. TOKYO, TITANIC, RED) act as natural red herrings;
+// the generator rejects combos where a word fits two chosen categories.
+export const mediumBank=[
+[0,"Beatles",["JOHN","PAUL","GEORGE","RINGO"]],
+[0,"Hogwarts houses",["GRYFFINDOR","SLYTHERIN","RAVENCLAW","HUFFLEPUFF"]],
+[0,"Social apps",["REDDIT","TIKTOK","SNAPCHAT","FACEBOOK","INSTAGRAM"]],
+[0,"Oceans",["PACIFIC","ATLANTIC","INDIAN","ARCTIC","SOUTHERN"]],
+[0,"Primary & secondary colors",["RED","BLUE","YELLOW","GREEN","ORANGE","PURPLE"]],
+[0,"Coffee drinks",["LATTE","MOCHA","ESPRESSO","CAPPUCCINO","AMERICANO"]],
+[1,"Avengers",["THOR","HULK","HAWKEYE","VISION","FALCON"]],
+[1,"Pixar films",["UP","CARS","COCO","BRAVE","SOUL","ONWARD"]],
+[1,"Board games",["CLUE","RISK","SORRY","MONOPOLY","SCRABBLE"]],
+[1,"Capital cities",["PARIS","ROME","CAIRO","OSLO","LIMA","TOKYO"]],
+[1,"Seinfeld characters",["JERRY","ELAINE","KRAMER","NEWMAN"]],
+[1,"Mario Kart items",["SHELL","BANANA","MUSHROOM","STAR","BOMB"]],
+[2,"Shakespeare plays",["HAMLET","OTHELLO","MACBETH","TEMPEST"]],
+[2,"Chemical elements",["GOLD","IRON","NEON","ZINC","TIN","LEAD"]],
+[2,"Taylor Swift albums",["FEARLESS","RED","REPUTATION","LOVER","FOLKLORE","EVERMORE"]],
+[2,"Greek gods",["ZEUS","HERA","ARES","APOLLO","HERMES","ATHENA"]],
+[2,"Constellations",["ORION","LYRA","DRACO","CYGNUS","PEGASUS"]],
+[2,"Nobel prize categories",["PEACE","PHYSICS","CHEMISTRY","LITERATURE","MEDICINE"]],
+[3,"Famous ships",["TITANIC","MAYFLOWER","BOUNTY","BEAGLE","ENDEAVOUR"]],
+[3,"Olympic host cities",["ATHENS","SYDNEY","BEIJING","LONDON","TOKYO"]],
+[3,"Best Picture winners",["PARASITE","GLADIATOR","TITANIC","ROCKY","OPPENHEIMER"]],
+[3,"Programming languages named after things",["PYTHON","RUBY","JAVA","SWIFT","RUST"]],
+[3,"Moons of Jupiter",["IO","EUROPA","GANYMEDE","CALLISTO"]],
+[3,"Apollo-era NASA programs",["MERCURY","GEMINI","APOLLO","ARTEMIS"]],
+];
