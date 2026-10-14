@@ -8,8 +8,8 @@ import History from "./History";
 
 const GAMES = [
   { id: "wordle", name: "Wordle", desc: "Guess the hidden word in 6 tries.", color: "#6aaa64", icon: "W" },
-  { id: "connections", name: "Connections", desc: "Group words that share a common thread.", color: "#b0c4ef", icon: "▦" },
-  { id: "strands", name: "Mini Strands", desc: "Find hidden words and uncover the theme.", color: "#c0ddd9", icon: "S" },
+  { id: "connections", name: "Connections", desc: "Group words that share a common thread.", color: "#ba81c5", icon: "▦" },
+  { id: "strands", name: "Mini Strands", desc: "Find hidden words and uncover the theme.", color: "#aedfee", icon: "S" },
   { id: "spelling", name: "Spelling Bee", desc: "How many words can you make with 7 letters?", color: "#f7da21", icon: "B", soon: true },
   { id: "mini", name: "The Mini", desc: "A tiny crossword in a few minutes.", color: "#95befa", icon: "M", soon: true },
 ];

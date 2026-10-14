@@ -16,7 +16,7 @@ const PUZZLES: Puzzle[] = [...base];
 for (let id = base.length + 1; PUZZLES.length < dayIndex() + 14; id++) PUZZLES.push(makePuzzle(id) as Puzzle);
 type S = { solved: number[]; mistakes: number; guesses: string[]; startedAt?: number; finishedAt?: number; won?: boolean; last?: { by: string; ok: boolean; oneAway?: boolean; at: number } };
 const MAX_MISTAKES = 4;
-const COLORS = ["#f9df6d", "#a0c35a", "#b0c4ef", "#ba81c5"];
+const COLORS = ["#f9df6d", "#a0c35a", "#b0c4ef", "#ba81c5"]; // NYT yellow, green, blue, purple
 
 export default function ConnectionsPage({ params }: { params: URLSearchParams }) {
   const idx = usePuzzleIndex(PUZZLES.length, params, 0);
@@ -43,7 +43,7 @@ function Connections({ idx, room }: { idx: number; room: string | null }) {
   const done = !!state.finishedAt;
 
   const solvedWords = new Set(solved.flatMap((g) => puzzle.groups[g].words));
-  const lockedBy = useMemo(() => { const m = new Map<string, string>(); for (const [p, ws] of Object.entries(locks)) for (const w of ws) m.set(w, p); return m; }, [locks]);
+  const lockedBy = useMemo(() => { const m = new Map<string, string>(); for (const [p, ws] of Object.entries(locks)) for (const w of ws) if (!solvedWords.has(w)) m.set(w, p); return m; }, [locks, solved.length]);
   const remaining = order.filter((w) => !solvedWords.has(w));
 
   useEffect(() => { setSel((s) => s.filter((w) => !solvedWords.has(w))); }, [solved.length]);

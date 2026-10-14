@@ -9,7 +9,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
-    "weekly": "node scripts/weekly.mjs"
+    "weekly": "node scripts/weekly.mjs",
+    "smoke": "node --env-file=.env.local scripts/smokeMultiplayer.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",
@@ -25,6 +26,7 @@
     "oxlint": "^1.81.0",
     "typescript": "~6.0.2",
     "vite": "^8.3.0",
-    "vitest": "^5.0.4"
+    "vitest": "^5.0.4",
+    "ws": "^8.22.0"
   }
 }

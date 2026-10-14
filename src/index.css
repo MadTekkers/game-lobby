@@ -1,4 +1,4 @@
-:root { --ink:#121212; --muted:#6e6e6e; --line:#d3d6da; --green:#6aaa64; --yellow:#c9b458; --gray:#787c7e; --span:#f8cd05; --found:#aedfee; --sel:#d4d4d4; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; color: var(--ink); background:#fff; }
+:root { --ink:#121212; --muted:#6e6e6e; --line:#d3d6da; --green:#6aaa64; --yellow:#c9b458; --gray:#787c7e; --span:#f5d33f; --found:#aedfee; --sel:#d4d4d4; font-family: "Libre Franklin", "Helvetica Neue", Helvetica, Arial, sans-serif; color: var(--ink); background:#fff; }
 * { box-sizing: border-box; } body { margin:0; -webkit-tap-highlight-color: transparent; }
 button { font-family: inherit; cursor: pointer; } button:disabled { cursor: default; opacity:.45; }
 .muted { color: var(--muted); } .small { font-size: 13px; } .center { text-align:center; }
@@ -93,3 +93,7 @@ footer { margin-top: 32px; }
 .tbl { width:100%; border-collapse: collapse; font-size: 14px; } .tbl td, .tbl th { text-align:left; padding: 6px 8px; border-bottom: 1px solid #eee; }
 .boards { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 12px; }
 @media (max-width: 420px) { .s-cell { font-size: 20px; margin: 2px; } .key { height: 50px; } .masthead h1 { font-size: 34px; } }
+/* NYT palette tokens */
+:root { --c-yellow:#f9df6d; --c-green:#a0c35a; --c-blue:#b0c4ef; --c-purple:#ba81c5; --bg-neutral:#f7f7f5; }
+body { background: #fff; } .masthead { background: var(--bg-neutral); border-radius: 0 0 10px 10px; }
+.c-tile { background: #efefe6; }
