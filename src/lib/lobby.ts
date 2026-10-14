@@ -4,7 +4,7 @@ import { getPlayer, newRoomId } from "./player";
 
 export type Mode = "solo" | "versus" | "coop";
 export type GameId = "strands" | "wordle" | "connections" | "crossword" | "mini" | "bee";
-export type Opts = { game: GameId; mode: Mode; d?: string; len?: string; p?: number };
+export type Opts = { game: GameId; mode: Mode; d?: string; len?: string; p?: number; cw?: number };
 export const GAME_META: Record<GameId, { name: string; modes: Mode[]; difficulty?: boolean; length?: boolean }> = {
   wordle: { name: "Wordle", modes: ["solo", "versus"] },
   connections: { name: "Connections", modes: ["solo", "coop"], difficulty: true },
@@ -18,7 +18,7 @@ export const MODE_LABEL: Record<Mode, string> = { solo: "Solo", versus: "Competi
 export function gameUrl(o: Opts & { room?: string | null }) {
   const q = new URLSearchParams();
   if (o.room) q.set("room", o.room);
-  q.set("mode", o.mode); if (o.d) q.set("d", o.d); if (o.len) q.set("len", o.len); if (o.p !== undefined) q.set("p", String(o.p));
+  q.set("mode", o.mode); if (o.d) q.set("d", o.d); if (o.len) q.set("len", o.len); if (o.p !== undefined) q.set("p", String(o.p)); if (o.cw) q.set("cw", String(o.cw));
   return `/${o.game}?${q}`;
 }
 export const randomCode = () => Array.from({ length: 4 }, () => "ABCDEFGHJKLMNPQRSTUVWXYZ"[Math.floor(Math.random() * 24)]).join("");

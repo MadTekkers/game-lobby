@@ -22,3 +22,12 @@ Games: **Wordle**, **Connections** (easy / medium / hard), **Mini Strands**, **C
 npm i && npm test && npm run build
 ```
 Env: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (publishable key).
+
+### Crossword repository
+Big crosswords (7×7, 11×11, 15×15) live in the Supabase table `crosswords` (id, size, difficulty, grid, across, down, created_at, published), so new ones appear without a redeploy. The Crossword setup screen browses the whole repository (filter by size, difficulty, played/unplayed, newest/oldest). The Mini (5×5) stays bundled with the weekly games.
+
+```
+npm run crossword:generate -- --count 30            # rotates through sizes × difficulties
+npm run crossword:generate -- --count 10 --sizes 15 --difficulties hard
+```
+Needs `python3` only (stdlib + bundled `scripts/crossword/clues.json`). Every puzzle is validated before insert and deduplicated by grid fingerprint. Credentials come from env or `/workspace/.secrets/game-lobby.env` (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `CROSSWORD_INGEST_SECRET`); inserts go through the `insert_crossword` RPC, which checks a SHA-256-hashed ingest key, so no service-role key is needed and nothing secret ships to the client.

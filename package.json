@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "weekly": "node scripts/weekly.mjs",
-    "smoke": "node --env-file=.env.local scripts/smokeMultiplayer.mjs"
+    "smoke": "node --env-file=.env.local scripts/smokeMultiplayer.mjs",
+    "crossword:generate": "python3 scripts/crossword/repo_generate.py"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

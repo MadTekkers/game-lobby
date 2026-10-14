@@ -3,6 +3,8 @@ import { go } from "./lib/router";
 import { GAME_META, MODE_LABEL, createRoom, gameUrl, type GameId, type Mode } from "./lib/lobby";
 import { ensurePlayer } from "./lib/player";
 import { rememberRoom } from "./lib/fx";
+import CrosswordBrowser from "./CrosswordBrowser";
+import { SIZE_TO_LEN } from "./lib/crosswordRepo";
 
 const MODE_DESC: Record<Mode, string> = { solo: "Just you, at your own pace.", versus: "Same puzzle, private boards — race everyone live.", coop: "One shared board — solve it together." };
 const LEN_DESC: Record<string, string> = { "5": "5 min · 7×7", "10": "10 min · 11×11", "30": "30 min · 15×15" };
@@ -15,7 +17,10 @@ export default function Setup({ game }: { game: GameId }) {
   const [name, setName] = useState("");
   const [priv, setPriv] = useState(false);
   const [busy, setBusy] = useState(false);
-  const opts = { game, mode, d: meta.difficulty ? (game === "connections" && d === "medium" ? "medium" : d) : undefined, len: meta.length ? len : undefined };
+  const [cwSel, setCwSel] = useState<{ id: number; size: number; difficulty: string } | null>(null);
+  const isCw = game === "crossword";
+  const opts = isCw && cwSel ? { game, mode, d: cwSel.difficulty, len: SIZE_TO_LEN[cwSel.size], cw: cwSel.id }
+    : { game, mode, d: meta.difficulty ? d : undefined, len: meta.length ? len : undefined };
 
   async function launch(kind: "solo" | "lobby" | "link") {
     if (kind === "solo") return go(gameUrl({ ...opts, mode: "solo" }));
@@ -38,10 +43,11 @@ export default function Setup({ game }: { game: GameId }) {
           </button>
         ))}
       </div>
-      {meta.difficulty && (<><h2 className="section">Difficulty</h2>
+      {isCw && (<><h2 className="section">Pick a crossword</h2><CrosswordBrowser selected={cwSel?.id ?? null} onSelect={setCwSel} /></>)}
+      {meta.difficulty && !isCw && (<><h2 className="section">Difficulty</h2>
         <div className="seg">{["easy", "medium", "hard"].map((x) => <button key={x} className={d === x ? "on" : ""} onClick={() => setD(x)}>{x[0].toUpperCase() + x.slice(1)}</button>)}</div>
         {game === "connections" && <p className="muted small">Easy: everyday categories · Medium: trivia & pop culture with traps · Hard: wordplay (hidden words, homophones, ___ + word, anagrams) and red herrings.</p>}</>)}
-      {meta.length && (<><h2 className="section">Length</h2>
+      {meta.length && !isCw && (<><h2 className="section">Length</h2>
         <div className="seg">{["5", "10", "30"].map((x) => <button key={x} className={len === x ? "on" : ""} onClick={() => setLen(x)}>{LEN_DESC[x]}</button>)}</div></>)}
       {mode !== "solo" && (<>
         <h2 className="section">Lobby</h2>

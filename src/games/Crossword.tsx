@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CROSSWORDS, type CW } from "./puzzleData";
+import { supabase } from "../lib/supabase";
+import { getCrossword, pickCrossword, LEN_TO_SIZE, markPlayed } from "../lib/crosswordRepo";
 import { usePlayerState, useSharedBoard, recordResult } from "../lib/shared";
 import { GameHeader, Timer, Toast, useToast, usePuzzleIndex } from "./common";
 import { fmtTime } from "../lib/daily";
@@ -7,17 +9,44 @@ import { beep, confetti, bumpStreak, playerColor, CAPS } from "../lib/fx";
 
 type Entry = CW["across"][number];
 type S = { fills: string[]; startedAt?: number; finishedAt?: number; won?: boolean; pct?: number };
-const LEN_SIZE: Record<string, string> = { "5": "5", "10": "10", "30": "30" };
 
 export default function CrosswordPage({ params, mini }: { params: URLSearchParams; mini?: boolean }) {
-  const d = ["easy", "medium", "hard"].includes(params.get("d") || "") ? params.get("d")! : mini ? "easy" : "medium";
-  const len = mini ? "mini" : LEN_SIZE[params.get("len") || "10"] || "10";
-  const listKey = `${len}-${d}`; const list = CROSSWORDS[listKey] || [];
+  if (mini) return <MiniPage params={params} />;
+  return <RepoPage params={params} />;
+}
+
+function MiniPage({ params }: { params: URLSearchParams }) {
+  const d = ["easy", "medium", "hard"].includes(params.get("d") || "") ? params.get("d")! : "easy";
+  const listKey = `mini-${d}`; const list = CROSSWORDS[listKey] || [];
   const idx = usePuzzleIndex(Math.max(list.length, 1), params);
   if (!list.length) return <p className="center muted">No puzzles for this setting yet.</p>;
   if (idx === null) return <p className="center muted">Loading puzzle…</p>;
   const room = params.get("room"); const mode = room ? params.get("mode") || "coop" : "solo";
-  return <Crossword key={listKey + idx} cw={list[idx]} idx={idx} listKey={listKey} room={room} mode={mode} title={mini ? "The Mini" : `Crossword · ${list[idx].size}×${list[idx].size}`} game={mini ? "mini" : "crossword"} />;
+  return <Crossword key={listKey + idx} cw={list[idx]} idx={idx} listKey={listKey} room={room} mode={mode} title="The Mini" game="mini" />;
+}
+
+/** Big crosswords come from the Supabase repository (grows without redeploys). */
+function RepoPage({ params }: { params: URLSearchParams }) {
+  const [id, setId] = useState<number | null>(params.get("cw") ? Number(params.get("cw")) : null);
+  const [cw, setCw] = useState<CW | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    (async () => {
+      let cid = id;
+      if (!cid) {
+        const room = params.get("room");
+        if (room && supabase) { const { data } = await supabase.from("rooms").select("params").eq("id", room).maybeSingle(); cid = data?.params?.cw ?? null; }
+        if (!cid) cid = await pickCrossword(LEN_TO_SIZE[params.get("len") || "10"] || 11, params.get("d") || "medium");
+        if (!cid) { setErr("No crosswords in the repository yet."); return; }
+        setId(cid);
+      }
+      const c = await getCrossword(cid); if (!c) setErr("Crossword not found."); else setCw(c);
+    })();
+  }, []);
+  if (err) return <p className="center muted">{err}</p>;
+  if (!cw || !id) return <p className="center muted">Loading crossword…</p>;
+  const room = params.get("room"); const mode = room ? params.get("mode") || "coop" : "solo";
+  return <Crossword key={id} cw={cw} idx={id} listKey="repo" room={room} mode={mode} title={`Crossword #${id} · ${cw.size}×${cw.size}`} game="crossword" />;
 }
 
 function Crossword({ cw, idx, listKey, room, mode, title, game }: { cw: CW; idx: number; listKey: string; room: string | null; mode: string; title: string; game: string }) {
@@ -86,6 +115,7 @@ function Crossword({ cw, idx, listKey, room, mode, title, game }: { cw: CW; idx:
     window.addEventListener("keydown", f); return () => window.removeEventListener("keydown", f);
   });
   useEffect(() => {
+    if (state.finishedAt && game === "crossword") markPlayed(idx);
     if (state.finishedAt && state.startedAt) recordResult({ room, game, puzzleId: idx, won: true, mistakes: 0, hints: checked ? 1 : 0, seconds: Math.round((state.finishedAt - state.startedAt) / 1000) });
   }, [state.finishedAt]);
 
