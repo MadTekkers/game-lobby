@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ANSWERS, score, type Mark } from "./wordleLogic";
 import { usePlayerState, recordResult } from "../lib/shared";
 import { PuzzleBar, GameHeader, Timer, Toast, useToast, usePuzzleIndex } from "./common";
 import { ensurePlayer } from "../lib/player";
 import { fmtTime } from "../lib/daily";
-import { beep, confetti, bumpStreak, CAPS } from "../lib/fx";
+import { beep, confetti, bumpStreak, CAPS, playerColor } from "../lib/fx";
+import { useSharedBoard } from "../lib/shared";
 
 type S = { guesses: string[]; startedAt?: number; finishedAt?: number; won?: boolean };
 const MAX = 6;
@@ -14,19 +15,33 @@ const loadGuesses = () => fetch("/wordle-guesses.json").then((r) => r.json()).th
 export default function WordlePage({ params }: { params: URLSearchParams }) {
   const idx = usePuzzleIndex(ANSWERS.length, params, 3);
   if (idx === null) return <p className="center muted">Loading puzzle…</p>;
-  return <Wordle key={idx} idx={idx} room={params.get("room")} />;
+  const room = params.get("room");
+  return <Wordle key={idx} idx={idx} room={room} coop={!!room && params.get("mode") === "coop"} />;
 }
 
-function Wordle({ idx, room }: { idx: number; room: string | null }) {
+function Wordle({ idx, room, coop }: { idx: number; room: string | null; coop: boolean }) {
   useEffect(() => { if (room) ensurePlayer(); if (!guessSet) loadGuesses(); }, [room]);
   const answer = ANSWERS[idx];
-  const { state, update, others, status } = usePlayerState<S>("wordle", idx, { guesses: [] }, room);
+  const solo = usePlayerState<S>("wordle", idx, { guesses: [] }, coop ? null : room);
+  const shared = useSharedBoard<S>("wordle-coop", idx, { guesses: [] }, coop ? room : null);
+  const state: S = coop ? { ...shared.state, guesses: shared.state.guesses || [] } : solo.state;
+  const others = coop ? {} : solo.others;
+  const status = coop ? shared.status : solo.status;
   const [cur, setCur] = useState("");
+  useEffect(() => { if (coop) shared.broadcastSelection([cur]); }, [cur, coop]);
+  /** Co-op: compare-and-swap so only one row is submitted at a time; a stale submit is rejected. */
+  const update = (fn: (s: S) => S, rowAt: number) => {
+    if (!coop) return solo.update(fn);
+    shared.commit((s) => { const c = { ...s, guesses: s.guesses || [] }; return c.guesses.length !== rowAt || c.finishedAt ? c : fn(c); })
+      .then((ok) => { if (!ok) showToast("A teammate submitted first — try again"); });
+  };
   const [shake, setShake] = useState(false);
   const [revealRow, setRevealRow] = useState(-1);
   const [closed, setClosed] = useState(false);
   const [toast, showToast] = useToast();
   const done = !!state.finishedAt;
+  const prevLen = useRef(state.guesses.length);
+  useEffect(() => { if (state.guesses.length > prevLen.current) setRevealRow(state.guesses.length - 1); prevLen.current = state.guesses.length; }, [state.guesses.length]);
 
   const submit = useCallback(() => {
     if (done) return;
@@ -37,10 +52,10 @@ function Wordle({ idx, room }: { idx: number; room: string | null }) {
       const guesses = [...s.guesses, g]; const now = Date.now(); const won = g === answer;
       const fin = won || guesses.length >= MAX;
       return { ...s, guesses, startedAt: s.startedAt ?? now, finishedAt: fin ? now : undefined, won: fin ? won : undefined };
-    });
+    }, state.guesses.length);
     if (g === answer) setTimeout(() => showToast(["Genius", "Magnificent", "Impressive", "Splendid", "Great", "Phew"][state.guesses.length]), 1700);
     else if (state.guesses.length + 1 >= MAX) setTimeout(() => showToast(answer.toUpperCase()), 1700);
-  }, [cur, done, state.guesses.length, answer, update]);
+  }, [cur, done, state.guesses.length, answer, coop, shared.commit, solo.update]);
 
   const press = useCallback((k: string) => {
     if (done) return;
@@ -63,7 +78,7 @@ function Wordle({ idx, room }: { idx: number; room: string | null }) {
 
   return (
     <div className="game wordle">
-      <GameHeader title="Wordle" game="wordle" room={room} status={status} peers={Object.keys(others)} cap={CAPS.versus} />
+      <GameHeader title={`Wordle${room ? (coop ? " · Co-op" : " · Versus") : ""}`} game="wordle" room={room} status={status} peers={coop ? shared.peers : Object.keys(others)} cap={coop ? CAPS.shared : CAPS.versus} />
       <PuzzleBar room={room} pool={{ key: "wordle", size: ANSWERS.length, current: idx, done }} />
       <div className="strands-status"><span className="muted">{MAX - state.guesses.length} guesses left</span><Timer startedAt={state.startedAt} finishedAt={state.finishedAt} /></div>
       <div className="w-grid">
@@ -81,6 +96,11 @@ function Wordle({ idx, room }: { idx: number; room: string | null }) {
           );
         })}
       </div>
+      {coop && !done && Object.entries(shared.locks).filter(([, v]) => v[0]).length > 0 && (
+        <div className="ghosts">{Object.entries(shared.locks).filter(([, v]) => v[0]).map(([pl, v]) => (
+          <div key={pl} className="ghost-row" style={{ color: playerColor(pl) }}><span className="ghost-name">{pl}</span>
+            {Array.from({ length: 5 }).map((_, i) => <span key={i} className="ghost-tile" style={{ borderColor: playerColor(pl) }}>{v[0][i] || ""}</span>)}</div>))}
+        </div>)}
       <div className="keyboard">
         {["qwertyuiop", "asdfghjkl", "+zxcvbnm-"].map((row) => (
           <div className="k-row" key={row}>

@@ -4,8 +4,9 @@ import { useLobby, gameUrl, GAME_META, MODE_LABEL } from "./lib/lobby";
 import { ensurePlayer, getPlayer } from "./lib/player";
 import { playerColor, initials, rememberRoom, rememberPeers, CAPS } from "./lib/fx";
 
-export function Avatar({ name, size = 34 }: { name: string; size?: number }) {
-  return <span className="avatar" title={name} style={{ background: playerColor(name), width: size, height: size, fontSize: size * 0.4 }}>{initials(name)}</span>;
+export function Avatar({ name: raw, size = 34 }: { name: string; size?: number }) {
+  const name = raw === "You" ? getPlayer() || "You" : raw;
+  return <span className="avatar" title={name} style={{ background: playerColor(name), width: size, height: size, fontSize: Math.max(9, size * 0.4), minWidth: size }}>{initials(name)}</span>;
 }
 
 export default function Lobby({ room }: { room: string }) {

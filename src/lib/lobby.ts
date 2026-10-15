@@ -6,7 +6,7 @@ export type Mode = "solo" | "versus" | "coop";
 export type GameId = "strands" | "wordle" | "connections" | "crossword" | "mini" | "bee";
 export type Opts = { game: GameId; mode: Mode; d?: string; len?: string; p?: number; cw?: number };
 export const GAME_META: Record<GameId, { name: string; modes: Mode[]; difficulty?: boolean; length?: boolean }> = {
-  wordle: { name: "Wordle", modes: ["solo", "versus"] },
+  wordle: { name: "Wordle", modes: ["solo", "versus", "coop"] },
   connections: { name: "Connections", modes: ["solo", "coop"], difficulty: true },
   strands: { name: "Mini Strands", modes: ["solo", "versus", "coop"] },
   crossword: { name: "Crossword", modes: ["solo", "versus", "coop"], difficulty: true, length: true },

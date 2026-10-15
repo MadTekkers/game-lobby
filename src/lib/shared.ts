@@ -76,7 +76,8 @@ export function useSharedBoard<S extends Base>(game: string, puzzleId: number, i
     })();
     const ch = sb.channel(`board-${room}`, { config: { presence: { key: me } } })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "rooms", filter: `id=eq.${room}` }, (p: any) => {
-        version.current = p.new.version; setLocal(p.new.state as S);
+        if (p.new.version < version.current) return; // ignore out-of-order events
+        version.current = p.new.version; ref.current = p.new.state; setLocal(p.new.state as S);
       })
       .on("broadcast", { event: "select" }, ({ payload }: any) => {
         if (payload.player !== me) setLocks((l) => ({ ...l, [payload.player]: payload.words }));
@@ -118,7 +119,12 @@ export function useSharedBoard<S extends Base>(game: string, puzzleId: number, i
     if (room && supabase) supabase.from("rooms").update({ state: next, version: version.current + 1, updated_at: new Date().toISOString() }).eq("id", room).then(() => { version.current += 1; });
   }, [room]);
   const setLocalState = useCallback((fn: (s: S) => S) => { const n = fn(ref.current); ref.current = n; setLocal(n); }, []);
-  return { state, commit, status, locks, peers, broadcastSelection, me, send, save, setLocalState };
+  /** Apply an authoritative server snapshot only if it is newer than what we have (ordering by row version). */
+  const applyServer = useCallback((snap: { state: S; version: number } | null) => {
+    if (!snap || snap.version < version.current) return;
+    version.current = snap.version; ref.current = snap.state; setLocal(snap.state);
+  }, []);
+  return { state, commit, status, locks, peers, broadcastSelection, me, send, save, setLocalState, applyServer };
 }
 
 export async function recordResult(r: { room: string | null; game: string; puzzleId: number; won: boolean; mistakes: number; hints: number; seconds: number }) {

@@ -4,8 +4,9 @@ import { supabase } from "../lib/supabase";
 import { getCrossword, pickCrossword, LEN_TO_SIZE, markPlayed } from "../lib/crosswordRepo";
 import { usePlayerState, useSharedBoard, recordResult } from "../lib/shared";
 import { PuzzleBar, GameHeader, Timer, Toast, useToast, usePuzzleIndex } from "./common";
+import { Avatar } from "../Lobby";
 import { fmtTime } from "../lib/daily";
-import { beep, confetti, bumpStreak, playerColor, CAPS } from "../lib/fx";
+import { initials, beep, confetti, bumpStreak, playerColor, CAPS } from "../lib/fx";
 
 type Entry = CW["across"][number];
 type S = { fills: string[]; startedAt?: number; finishedAt?: number; won?: boolean; pct?: number };
@@ -144,7 +145,7 @@ function Crossword({ cw, idx, listKey, room, mode, title, game }: { cw: CW; idx:
                   style={peer ? { boxShadow: `inset 0 0 0 3px ${playerColor(peer.pl)}` } : undefined}
                   onClick={() => { if (i === cur) setDir((d) => (d === "across" ? "down" : "across")); setCur(i); }}>
                   {nums[i] && <span className="num">{nums[i]}</span>}<span className="ch">{f}</span>
-                  {peer && <span className="peer-tag" style={{ background: playerColor(peer.pl) }}>{peer.pl.slice(0, 1)}</span>}
+                  {peer && <span className="peer-tag" style={{ background: playerColor(peer.pl) }}>{initials(peer.pl)}</span>}
                 </div>
               );
             })}
@@ -161,7 +162,7 @@ function Crossword({ cw, idx, listKey, room, mode, title, game }: { cw: CW; idx:
       {Object.keys(others).length > 0 && (
         <div className="leaderboard"><h3>Live standings</h3>
           {[["You", state] as [string, S], ...Object.entries(others)].sort((a, b) => (b[1].pct || 0) - (a[1].pct || 0)).map(([name, o], i) => (
-            <div className="lb-row" key={name}><span className="lb-rank">{i + 1}</span><span className="avatar sm" style={{ background: playerColor(name) }}>{name[0].toUpperCase()}</span><span className="lb-name">{name}</span>
+            <div className="lb-row" key={name}><span className="lb-rank">{i + 1}</span><Avatar name={name} size={24} /><span className="lb-name">{name}</span>
               <span className="lb-bar"><i style={{ width: `${o.pct || 0}%`, background: playerColor(name) }} /></span><span className="muted small">{o.pct || 0}%{o.finishedAt && o.startedAt ? ` · ${fmtTime(Math.round((o.finishedAt - o.startedAt) / 1000))}` : ""}</span></div>))}
         </div>)}
       {done && !closed && (

@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import data from "../data/connections.json";
 import { useSharedBoard, recordResult } from "../lib/shared";
 import { PuzzleBar, GameHeader, Timer, Toast, useToast, usePuzzleIndex } from "./common";
 import { ensurePlayer } from "../lib/player";
 import { fmtTime } from "../lib/daily";
 import { confetti, beep, playerColor } from "../lib/fx";
+import { FitText } from "../lib/FitText";
+import { supabase } from "../lib/supabase";
 
 type Group = { level: number; category: string; words: string[] };
 type Puzzle = { id: number; groups: Group[] };
@@ -18,7 +20,7 @@ for (let id = base.length + 1; PUZZLES.length < dayIndex() + 14; id++) PUZZLES.p
 import medium from "../data/connections-medium.json";
 import hard from "../data/connections-hard.json";
 const LISTS: Record<string, Puzzle[]> = { easy: PUZZLES, medium: medium as Puzzle[], hard: hard as Puzzle[] };
-type S = { solved: number[]; mistakes: number; guesses: string[]; startedAt?: number; finishedAt?: number; won?: boolean; last?: { by: string; ok: boolean; oneAway?: boolean; at: number } };
+type S = { sel?: { w: string; p: string }[]; solved: number[]; mistakes: number; guesses: string[]; startedAt?: number; finishedAt?: number; won?: boolean; last?: { by: string; ok: boolean; oneAway?: boolean; at: number } };
 const MAX_MISTAKES = 4;
 const COLORS = ["#f9df6d", "#a0c35a", "#b0c4ef", "#ba81c5"]; // NYT yellow, green, blue, purple
 
@@ -35,10 +37,18 @@ function Connections({ idx, d, room }: { idx: number; d: string; room: string | 
   useEffect(() => { if (room) ensurePlayer(); }, [room]);
   const puzzle = LISTS[d][idx];
   const init: S = { solved: [], mistakes: 0, guesses: [] };
-  const { state, commit, status, locks, peers, broadcastSelection, me } = useSharedBoard<S>("connections-" + d, idx, init, room);
+  const { state, commit, status, peers, me, setLocalState, applyServer } = useSharedBoard<S>("connections-" + d, idx, init, room);
   const solved = state.solved || [];
   const [order, setOrder] = useState(() => seededShuffle(puzzle.groups.flatMap((g) => g.words), idx + 1));
-  const [sel, setSel] = useState<string[]>([]);
+  const [localSel, setLocalSel] = useState<string[]>([]);
+  // Co-op: ONE shared selection (max 4) stored in rooms.state.sel, toggled atomically server-side.
+  const shared = !!room && !!supabase;
+  const sel = shared ? (state.sel || []).map((x) => x.w) : localSel;
+  const selBy = new Map((state.sel || []).map((x) => [x.w, x.p] as [string, string]));
+  const setSel = (fn: (s: string[]) => string[]) => {
+    if (!shared) return setLocalSel(fn);
+    const next = fn(sel); if (next.length === 0 && sel.length) { supabase!.rpc("clear_selection", { p_room: room }).then(({ data }) => applyServer(data)); }
+  };
   const [shake, setShake] = useState(false);
   const [jump, setJump] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -48,24 +58,26 @@ function Connections({ idx, d, room }: { idx: number; d: string; room: string | 
   const done = !!state.finishedAt;
 
   const solvedWords = new Set(solved.flatMap((g) => puzzle.groups[g].words));
-  const lockedBy = useMemo(() => { const m = new Map<string, string>(); for (const [p, ws] of Object.entries(locks)) for (const w of ws) if (!solvedWords.has(w)) m.set(w, p); return m; }, [locks, solved.length]);
   const remaining = order.filter((w) => !solvedWords.has(w));
 
-  useEffect(() => { setSel((s) => s.filter((w) => !solvedWords.has(w))); }, [solved.length]);
-  useEffect(() => { broadcastSelection(sel); }, [sel, broadcastSelection]);
+  useEffect(() => { if (!shared) setLocalSel((s) => s.filter((w) => !solvedWords.has(w))); }, [solved.length]);
   useEffect(() => { // feedback for a teammate's guess
     const l = state.last; if (!l || l.at <= lastSeen.current) return; lastSeen.current = l.at;
     if (l.by !== me) showToast(l.ok ? `${l.by} found a group!` : l.oneAway ? `${l.by}: one away…` : `${l.by} made a mistake`);
   }, [state.last?.at]);
   useEffect(() => {
-    if (state.finishedAt && state.startedAt) { if (state.won) confetti(); else beep("bad"); }
+    if (state.finishedAt && Date.now() - state.finishedAt < 15000) { if (state.won) confetti(); else beep("bad"); }
     if (state.finishedAt && state.startedAt) recordResult({ room, game: "connections", puzzleId: idx, won: !!state.won, mistakes: state.mistakes, hints: 0, seconds: Math.round((state.finishedAt - state.startedAt) / 1000) });
   }, [state.finishedAt]);
 
   const toggle = (w: string) => {
     if (done || busy) return;
-    const other = lockedBy.get(w); if (other) { showToast(`${other} has that tile`); return; }
-    setSel((s) => (s.includes(w) ? s.filter((x) => x !== w) : s.length < 4 ? [...s, w] : s));
+    beep("tap");
+    if (!shared) return setLocalSel((s) => (s.includes(w) ? s.filter((x) => x !== w) : s.length < 4 ? [...s, w] : s));
+    // optimistic local toggle, then the authoritative result from the server (row-locked toggle)
+    setLocalState((s) => { const cur = s.sel || []; const has = cur.some((x) => x.w === w);
+      return { ...s, sel: has ? cur.filter((x) => x.w !== w) : cur.length < 4 ? [...cur, { w, p: me }] : cur }; });
+    supabase!.rpc("toggle_selection", { p_room: room, p_word: w, p_player: me }).then(({ data }) => applyServer(data));
   };
 
   async function submit() {
@@ -75,8 +87,10 @@ function Connections({ idx, d, room }: { idx: number; d: string; room: string | 
     const gi = puzzle.groups.findIndex((g) => sel.every((w) => g.words.includes(w)));
     setBusy(true);
     setJump(true); await new Promise((r) => setTimeout(r, 650)); setJump(false);
+    let used = sel;
     const ok = await commit((s) => {
       const cur = { ...init, ...s }; const now = Date.now();
+      if (shared) { const ss = (cur.sel || []).map((x) => x.w); if (ss.length !== 4 || ss.slice().sort().join("|") !== k) return cur; used = ss; cur.sel = []; }
       if (cur.finishedAt || sel.some((w) => cur.solved.some((g) => puzzle.groups[g].words.includes(w)))) return cur;
       const guesses = [...cur.guesses, k];
       if (gi >= 0) {
@@ -90,8 +104,9 @@ function Connections({ idx, d, room }: { idx: number; d: string; room: string | 
     });
     setBusy(false);
     if (!ok) { showToast("Someone else just guessed — try again"); return; }
-    if (gi >= 0) { setSel([]); beep("good"); }
-    else { beep("bad"); setShake(true); setTimeout(() => setShake(false), 500); showToast(puzzle.groups.some((g) => sel.filter((w) => g.words.includes(w)).length === 3) ? "One away..." : "Not quite"); }
+    void used;
+    if (gi >= 0) { if (!shared) setLocalSel([]); beep("good"); }
+    else { if (shared) supabase!.rpc("clear_selection", { p_room: room }).then(({ data }) => applyServer(data)); beep("bad"); setShake(true); setTimeout(() => setShake(false), 500); showToast(puzzle.groups.some((g) => sel.filter((w) => g.words.includes(w)).length === 3) ? "One away..." : "Not quite"); }
   }
 
   return (
@@ -101,22 +116,22 @@ function Connections({ idx, d, room }: { idx: number; d: string; room: string | 
       <div className="strands-status"><span className="muted">Create four groups of four!</span><Timer startedAt={state.startedAt} finishedAt={state.finishedAt} /></div>
       <div className="c-board">
         {solved.map((g) => { const G = puzzle.groups[g]; return (
-          <div key={g} className="c-bar" style={{ background: COLORS[G.level] }}><b>{G.category.toUpperCase()}</b><span>{G.words.join(", ")}</span></div>); })}
+          <div key={g} className="c-bar" style={{ background: COLORS[G.level] }}><b><FitText text={G.category.toUpperCase()} max={16} min={10} /></b><span><FitText text={G.words.join(", ")} max={14} min={9} /></span></div>); })}
         <div className="c-grid">
           {remaining.map((w) => {
-            const s = sel.includes(w); const other = lockedBy.get(w);
-            return <button key={w} style={other ? { background: playerColor(other) + "33", boxShadow: `inset 0 0 0 3px ${playerColor(other)}` } : s && jump ? { animationDelay: `${sel.indexOf(w) * 90}ms` } : undefined} className={`c-tile ${s ? "sel" : ""} ${other ? "locked" : ""} ${s && shake ? "shake" : ""} ${s && jump ? "jump" : ""}`}
-              onClick={() => toggle(w)} title={other ? `Selected by ${other}` : undefined}>{w}{other && <small>{other}</small>}</button>;
+            const s = sel.includes(w); const by = shared ? selBy.get(w) : undefined;
+            return <button key={w} style={s && jump ? { animationDelay: `${sel.indexOf(w) * 90}ms` } : undefined} className={`c-tile ${s ? "sel" : ""} ${s && shake ? "shake" : ""} ${s && jump ? "jump" : ""}`}
+              onClick={() => toggle(w)} title={by ? `Selected by ${by}` : undefined}><FitText text={w} max={15} min={10} />{by && <i className="sel-dot" style={{ background: playerColor(by) }} />}</button>;
           })}
         </div>
       </div>
       <div className="mistakes">Mistakes remaining: {Array.from({ length: MAX_MISTAKES }).map((_, i) => <span key={i} className={`m-dot ${i < MAX_MISTAKES - (state.mistakes || 0) ? "" : "used"}`} />)}</div>
       <div className="controls">
         <button className="pill ghost" disabled={done} onClick={() => setOrder((o) => seededShuffle(o, Date.now() & 0xffff))}>Shuffle</button>
-        <button className="pill ghost" disabled={!sel.length || done} onClick={() => setSel([])}>Deselect all</button>
+        <button className="pill ghost" disabled={!sel.length || done} onClick={() => setSel(() => [])}>Deselect all</button>
         <button className="pill" disabled={sel.length !== 4 || busy || done} onClick={submit}>Submit</button>
       </div>
-      {room && <p className="muted small center">Shared board: tiles your partner selects are locked for you; one guess is evaluated at a time and mistakes are shared.</p>}
+      {room && <p className="muted small center">Shared board: everyone edits one selection (the dot shows who picked each tile); anyone can submit once 4 are chosen; one guess is evaluated at a time and mistakes are shared.</p>}
       {done && !closed && (
         <div className="modal-bg" style={{ animationDelay: "1s" }}><div className="modal">
           <button className="x" onClick={() => setClosed(true)}>×</button>

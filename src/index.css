@@ -169,3 +169,16 @@ body { background: #fff; } .masthead { background: var(--bg-neutral); border-rad
 .diff { font-size: 12px; font-weight: 700; text-transform: uppercase; border-radius: 4px; padding: 1px 6px; } .diff.easy { background: var(--c-green); } .diff.medium { background: var(--c-yellow); } .diff.hard { background: var(--c-purple); color: #fff; }
 .puzzle-bar { position: relative; z-index: 45; display: flex; gap: 8px; justify-content: flex-end; align-items: center; flex-wrap: wrap; margin: -4px 0 8px; }
 .pill.sm { padding: 5px 12px; font-size: 13px; } .flag-note { font-size: 13px; color: #8a5a00; background: #fff4d6; border-radius: 6px; padding: 3px 8px; }
+/* auto-fit text: wrap only between words / at hyphens, never inside a word */
+.fit-text { display: inline-block; transform-origin: center; max-width: 100%; white-space: normal; word-break: keep-all; overflow-wrap: normal; hyphens: manual; line-height: 1.1; }
+.c-tile { word-break: normal; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 4px; }
+.c-bar b, .c-bar span { display: block; width: 100%; }
+.c-bar { overflow: hidden; }
+.c-tile { position: relative; } .sel-dot { position: absolute; top: 5px; right: 5px; width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid #fff; }
+.c-bar b, .c-bar span { height: auto; } .c-bar b { min-height: 1.2em; }
+/* avatars: always fit two letters */
+.avatar { overflow: hidden; line-height: 1; letter-spacing: -0.02em; font-weight: 700; padding: 0; text-align: center; white-space: nowrap; font-family: "Libre Franklin", Helvetica, Arial, sans-serif; }
+.peer-tag { min-width: 14px; text-align: center; letter-spacing: -0.02em; }
+.ghosts { display: flex; flex-direction: column; gap: 4px; align-items: center; margin: -8px 0 12px; }
+.ghost-row { display: flex; gap: 4px; align-items: center; animation: fadein .2s; } .ghost-name { font-size: 12px; font-weight: 700; width: 64px; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 4px; }
+.ghost-tile { width: 26px; height: 26px; border: 2px dashed; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-weight: 700; text-transform: uppercase; font-size: 14px; opacity: .85; }

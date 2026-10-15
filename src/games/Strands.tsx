@@ -3,6 +3,7 @@ import { puzzles, matchWord, adjacent, key, ROWS, COLS, type Cell, type StrandsP
 import { usePlayerState, recordResult } from "../lib/shared";
 import { PuzzleBar, GameHeader, Timer, Toast, useToast, usePuzzleIndex } from "./common";
 import { ensurePlayer } from "../lib/player";
+import { Avatar } from "../Lobby";
 import { fmtTime } from "../lib/daily";
 import { useSharedBoard } from "../lib/shared";
 import { beep, confetti, bumpStreak, playerColor, CAPS } from "../lib/fx";
@@ -135,7 +136,7 @@ function Strands({ idx, p, room, mode }: { idx: number; p: StrandsPuzzle; room: 
           <h3>Live standings</h3>
           {[["You", state] as [string, S], ...Object.entries(others)].sort((x, y) => (y[1].found?.length || 0) - (x[1].found?.length || 0) || ((x[1].finishedAt || 9e15) - (x[1].startedAt || 0)) - ((y[1].finishedAt || 9e15) - (y[1].startedAt || 0))).map(([name, o], i) => (
             <div className="lb-row" key={name}>
-              <span className="lb-rank">{i + 1}</span><span className="avatar sm" style={{ background: playerColor(name) }}>{name.slice(0, 1).toUpperCase()}</span>
+              <span className="lb-rank">{i + 1}</span><Avatar name={name} size={24} />
               <span className="lb-name">{name}</span>
               <span className="lb-bar"><i style={{ width: `${((o.found?.length || 0) / total) * 100}%`, background: playerColor(name) }} /></span>
               <span className="muted small">{o.found?.length || 0}/{total}{(o.found || []).includes(p.spangram) ? " · ⭐ spangram" : ""}{o.finishedAt && o.startedAt ? ` · ${fmtTime(Math.round((o.finishedAt - o.startedAt) / 1000))}` : ""}</span>

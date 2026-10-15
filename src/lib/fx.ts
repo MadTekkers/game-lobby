@@ -1,7 +1,12 @@
 // Small UI effects: player colors/avatars, WebAudio sounds (toggleable), confetti, streaks.
 export const PLAYER_COLORS = ["#4f85e5", "#e05c5c", "#3fae5a", "#b25fc9", "#f29b30", "#1aa3a3", "#d6589a", "#7a6ad8"];
 export function playerColor(name: string) { let h = 0; for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0; return PLAYER_COLORS[h % PLAYER_COLORS.length]; }
-export const initials = (n: string) => n.trim().split(/\s+/).map((x) => x[0]).join("").slice(0, 2).toUpperCase() || "?";
+export function initials(n: string) {
+  const parts = n.trim().split(/[\s_.-]+/).filter(Boolean);
+  if (!parts.length) return "?";
+  if (parts.length >= 2) return (Array.from(parts[0])[0] + Array.from(parts[1])[0]).toUpperCase();
+  return Array.from(parts[0]).slice(0, 2).join("").toUpperCase();
+}
 
 export const soundOn = () => localStorage.getItem("gm_sound") !== "off";
 export const setSound = (on: boolean) => localStorage.setItem("gm_sound", on ? "on" : "off");

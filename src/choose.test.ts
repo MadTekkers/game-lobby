@@ -8,3 +8,9 @@ describe("next-puzzle picker", () => {
     expect(choose([0, 1, 2], 0, [{ 1: 50, 2: 10 }, { 1: 20 }])).toBe(2);
   });
 });
+import { initials } from "./lib/fx";
+describe("avatar initials", () => {
+  it("two words, one word, one letter", () => {
+    expect(initials("Mary Jane")).toBe("MJ"); expect(initials("Ryan")).toBe("RY"); expect(initials("r")).toBe("R"); expect(initials("  ryan chiem lee ")).toBe("RC"); expect(initials("")).toBe("?");
+  });
+});

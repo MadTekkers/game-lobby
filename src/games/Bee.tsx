@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Avatar } from "../Lobby";
 import { BEES, wordScore, type Bee } from "./puzzleData";
 import { usePlayerState, useSharedBoard, recordResult } from "../lib/shared";
 import { PuzzleBar, GameHeader, Timer, Toast, useToast, usePuzzleIndex } from "./common";
@@ -80,7 +81,7 @@ function BeeGame({ idx, b, room, mode }: { idx: number; b: Bee; room: string | n
       {Object.keys(others).length > 0 && (
         <div className="leaderboard"><h3>Score race</h3>
           {[["You", state] as [string, S], ...Object.entries(others)].map(([n, o]) => [n, o, (o.found || []).reduce((a: number, w: string) => a + wordScore(w), 0)] as const).sort((a, b2) => b2[2] - a[2]).map(([name, o, sc], i) => (
-            <div className="lb-row" key={name}><span className="lb-rank">{i + 1}</span><span className="avatar sm" style={{ background: playerColor(name) }}>{name[0].toUpperCase()}</span><span className="lb-name">{name}</span>
+            <div className="lb-row" key={name}><span className="lb-rank">{i + 1}</span><Avatar name={name} size={24} /><span className="lb-name">{name}</span>
               <span className="lb-bar"><i style={{ width: `${Math.min(100, (sc / b.max) * 100)}%`, background: playerColor(name) }} /></span><span className="muted small">{sc} pts · {rankOf(sc, b.max)} · {(o.found || []).length} words</span></div>))}
           <p className="muted small">Opponents' words are hidden; only scores are shown.</p>
         </div>)}
