@@ -5,6 +5,8 @@ import { ensurePlayer } from "./lib/player";
 import { rememberRoom } from "./lib/fx";
 import CrosswordBrowser from "./CrosswordBrowser";
 import { SIZE_TO_LEN } from "./lib/crosswordRepo";
+import { DAYS, WEEKLY_BASE, findWeekly, thisWeek, todayDay, useWeeks, weekLabel, weeklyDiff } from "./lib/weekly";
+import { parseHash } from "./lib/router";
 
 const MODE_DESC: Record<Mode, string> = { solo: "Just you, at your own pace.", versus: "Same puzzle, private boards — race everyone live.", coop: "One shared board — solve it together." };
 const LEN_DESC: Record<string, string> = { "5": "5 min · 7×7", "10": "10 min · 11×11", "30": "30 min · 15×15" };
@@ -12,20 +14,34 @@ const LEN_DESC: Record<string, string> = { "5": "5 min · 7×7", "10": "10 min �
 export default function Setup({ game }: { game: GameId }) {
   const meta = GAME_META[game];
   const [mode, setMode] = useState<Mode>(meta.modes[0]);
-  const [d, setD] = useState("medium");
+  const [d, setD] = useState(parseHash().params.get("d") || "medium");
   const [len, setLen] = useState("10");
   const [name, setName] = useState("");
   const [priv, setPriv] = useState(false);
   const [busy, setBusy] = useState(false);
   const [cwSel, setCwSel] = useState<{ id: number; size: number; difficulty: string } | null>(null);
   const isCw = game === "crossword";
+  const pre = parseHash().params;
+  const weeks = useWeeks(); const cur = thisWeek();
+  const [src, setSrc] = useState<"week" | "past" | "classic">(pre.get("wk") && pre.get("wk") !== cur ? "past" : "week");
+  const [pastWk, setPastWk] = useState(pre.get("wk") && pre.get("wk") !== cur ? pre.get("wk")! : "");
+  const [day, setDay] = useState(pre.get("day") ? Number(pre.get("day")) : todayDay());
+  const past = (weeks || []).filter((w) => w !== cur);
+  const wk = isCw || src === "classic" ? null : src === "week" ? cur : pastWk || past[0] || null;
+  const [err, setErr] = useState("");
   const opts = isCw && cwSel ? { game, mode, d: cwSel.difficulty, len: SIZE_TO_LEN[cwSel.size], cw: cwSel.id }
     : { game, mode, d: meta.difficulty ? d : undefined, len: meta.length ? len : undefined };
 
   async function launch(kind: "solo" | "lobby" | "link") {
-    if (kind === "solo") return go(gameUrl({ ...opts, mode: "solo" }));
+    let base: typeof opts & { p?: number; wk?: string; day?: number } = opts;
+    if (wk) {
+      const r = await findWeekly(wk, game, weeklyDiff(game, d), day);
+      if (!r) { setErr(`No ${meta.name} puzzle for ${weekLabel(wk)} · ${DAYS[day]} yet.`); return; }
+      base = { ...opts, p: WEEKLY_BASE + r.id, wk, day };
+    }
+    if (kind === "solo") return go(gameUrl({ ...base, mode: "solo" }));
     const me = ensurePlayer(); setBusy(true);
-    const ro = { ...opts, p: Math.floor(Math.random() * 10000) };
+    const ro = { ...base, p: base.p ?? Math.floor(Math.random() * 10000) };
     const { id } = await createRoom(ro, { name: name || `${me}'s ${meta.name}`, status: kind === "lobby" ? "lobby" : "playing", private: priv });
     setBusy(false);
     const url = gameUrl({ ...ro, room: id }); rememberRoom({ room: id, game, url, name });
@@ -44,7 +60,17 @@ export default function Setup({ game }: { game: GameId }) {
         ))}
       </div>
       {isCw && (<><h2 className="section">Pick a crossword</h2><CrosswordBrowser selected={cwSel?.id ?? null} onSelect={setCwSel} /></>)}
-      {meta.difficulty && !isCw && (<><h2 className="section">Difficulty</h2>
+      {!isCw && (<><h2 className="section">Puzzle</h2>
+        <div className="seg">
+          <button className={src === "week" ? "on" : ""} onClick={() => setSrc("week")}>This week</button>
+          <button className={src === "past" ? "on" : ""} disabled={!past.length} onClick={() => setSrc("past")}>Past week</button>
+          <button className={src === "classic" ? "on" : ""} onClick={() => setSrc("classic")}>Classic (random)</button>
+        </div>
+        {src === "past" && <div className="name-row"><label>Week <select value={pastWk || past[0] || ""} onChange={(e) => setPastWk(e.target.value)}>{past.map((w) => <option key={w} value={w}>{weekLabel(w)}</option>)}</select></label></div>}
+        {src !== "classic" && <div className="seg days">{DAYS.map((x, i) => <button key={x} className={day === i ? "on" : ""} disabled={src === "week" && i > todayDay()} onClick={() => setDay(i)}>{x}</button>)}</div>}
+        {wk && <p className="muted small">{weekLabel(wk)} · {DAYS[day]}{game === "mini" ? ` · ${["easy", "easy", "medium", "medium", "medium", "hard", "hard"][day]} (set by day)` : ""} — <a href="#/archive">browse the archive</a></p>}
+        {err && <p className="warn">{err}</p>}</>)}
+      {meta.difficulty && !isCw && !(game === "mini" && wk) && (<><h2 className="section">Difficulty</h2>
         <div className="seg">{["easy", "medium", "hard"].map((x) => <button key={x} className={d === x ? "on" : ""} onClick={() => setD(x)}>{x[0].toUpperCase() + x.slice(1)}</button>)}</div>
         {game === "connections" && <p className="muted small">Easy: everyday categories · Medium: trivia & pop culture with traps · Hard: wordplay (hidden words, homophones, ___ + word, anagrams) and red herrings.</p>}</>)}
       {meta.length && !isCw && (<><h2 className="section">Length</h2>

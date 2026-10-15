@@ -53,7 +53,10 @@ if __name__ == "__main__":
         s, d = combos[done % len(combos)]
         t = time.time(); cw = build(s, d, rng.randrange(1 << 30), DENS[s]); dt = time.time() - t
         if not cw: print(f"skip {s} {d} (no fill)", flush=True); continue
-        validate(cw); new_id = insert(E, cw); done += 1
+        validate(cw); new_id = insert(E, cw)
+        if new_id is None:  # insert_crossword returns NULL when the grid fingerprint already exists (ON CONFLICT DO NOTHING)
+            print(f"duplicate {s}x{s} {d} grid skipped (already in repository)", flush=True); continue
+        done += 1
         stats.setdefault(s, []).append(dt)
         print(f"[{done}/{a.count}] {s}x{s} {d} id={new_id} {dt:.1f}s", flush=True)
     for s, ts in sorted(stats.items()): print(f"avg {s}x{s}: {sum(ts)/len(ts):.1f}s over {len(ts)}")

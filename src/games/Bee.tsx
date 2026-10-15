@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Avatar } from "../Lobby";
 import { BEES, wordScore, type Bee } from "./puzzleData";
 import { usePlayerState, useSharedBoard, recordResult } from "../lib/shared";
-import { PuzzleBar, GameHeader, Timer, Toast, useToast, usePuzzleIndex } from "./common";
+import { PuzzleBar, GameHeader, Timer, Toast, useToast, usePuzzle } from "./common";
 import { beep, confetti, bumpStreak, playerColor, CAPS } from "../lib/fx";
 
 type S = { found: string[]; startedAt?: number; finishedAt?: number; won?: boolean; score?: number };
@@ -10,10 +10,10 @@ export const RANKS: [string, number][] = [["Beginner", 0], ["Good Start", 0.02],
 const rankOf = (score: number, max: number) => RANKS.filter(([, f]) => score >= Math.ceil(f * max)).pop()![0];
 
 export default function BeePage({ params }: { params: URLSearchParams }) {
-  const idx = usePuzzleIndex(BEES.length, params);
-  if (idx === null) return <p className="center muted">Loading puzzle…</p>;
+  const { idx, item } = usePuzzle<Bee>(BEES, params);
+  if (idx === null || !item) return <p className="center muted">Loading puzzle…</p>;
   const room = params.get("room");
-  return <BeeGame key={idx} idx={idx} b={BEES[idx]} room={room} mode={room ? params.get("mode") || "versus" : "solo"} />;
+  return <BeeGame key={idx} idx={idx} b={item} room={room} mode={room ? params.get("mode") || "versus" : "solo"} />;
 }
 
 function BeeGame({ idx, b, room, mode }: { idx: number; b: Bee; room: string | null; mode: string }) {

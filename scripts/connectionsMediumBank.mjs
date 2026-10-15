@@ -26,3 +26,21 @@ export const mediumBank=[
 [3,"Moons of Jupiter",["IO","EUROPA","GANYMEDE","CALLISTO"]],
 [3,"Apollo-era NASA programs",["MERCURY","GEMINI","APOLLO","ARTEMIS"]],
 ];
+mediumBank.push(
+[0,"Disney princesses",["ARIEL","BELLE","JASMINE","MULAN","MOANA","AURORA"]],
+[0,"Breakfast cereals",["CHEERIOS","WHEATIES","KIX","TRIX","CORNFLAKES"]],
+[0,"Sports leagues",["NBA","NFL","NHL","MLB","MLS","WNBA"]],
+[1,"Friends characters",["RACHEL","MONICA","PHOEBE","JOEY","CHANDLER","ROSS"]],
+[1,"Star Wars characters",["LUKE","LEIA","HAN","YODA","CHEWBACCA","REY"]],
+[1,"Pokémon",["PIKACHU","EEVEE","SNORLAX","CHARMANDER","BULBASAUR"]],
+[1,"Musicals",["CATS","HAMILTON","RENT","WICKED","GREASE","ANNIE"]],
+[2,"Beyoncé albums",["LEMONADE","RENAISSANCE","DANGEROUSLY","COWBOY"]],
+[2,"Car brands",["TESLA","FORD","HONDA","KIA","AUDI","VOLVO"]],
+[2,"Famous painters",["MONET","DALI","KAHLO","VERMEER","PICASSO","REMBRANDT"]],
+[2,"Ivy League schools",["YALE","BROWN","CORNELL","PRINCETON","HARVARD","DARTMOUTH"]],
+[3,"Things named Tesla",["CAR","COIL","UNIT","NIKOLA"]],
+[3,"Words before CAKE in pop culture",["CUP","PAN","CHEESE","SPONGE"]],
+[3,"Bond films",["SKYFALL","GOLDFINGER","SPECTRE","MOONRAKER","THUNDERBALL"]],
+[3,"Rivers",["NILE","AMAZON","DANUBE","THAMES","SEINE","GANGES"]],
+[3,"Famous horses",["SEABISCUIT","SECRETARIAT","TRIGGER","BLACKBEAUTY"]],
+);

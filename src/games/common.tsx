@@ -50,15 +50,29 @@ export function useToast(): [string | null, (m: string) => void] {
 
 import { dailyPick } from "../lib/daily";
 import { roomPuzzle } from "../lib/shared";
+import { WEEKLY_BASE, useWeeklyRow, weekLabel, DAYS, type WRow } from "../lib/weekly";
+/** Resolves the puzzle for a page: bundled list item, or a weekly puzzle from Supabase when idx >= WEEKLY_BASE. */
+export function usePuzzle<T>(list: T[], params: URLSearchParams, offset = 0, map: (d: any) => T = (d) => d): { idx: number | null; item?: T; row?: WRow } {
+  const idx = usePuzzleIndex(list.length, params, offset);
+  const row = useWeeklyRow(idx);
+  if (idx === null) return { idx: null };
+  if (idx >= WEEKLY_BASE) return row ? { idx, item: map(row.data), row } : { idx: null };
+  return { idx, item: list[idx] };
+}
+export function WeekTag({ idx }: { idx: number }) {
+  const row = useWeeklyRow(idx);
+  return row ? <span className="week-tag">📅 {weekLabel(row.week_start)} · {DAYS[row.day]}</span> : null;
+}
 /** Resolves the puzzle index: ?p= param, else the room's stored puzzle, else today's daily. */
 export function usePuzzleIndex(len: number, params: URLSearchParams, offset = 0): number | null {
   const room = params.get("room"); const p = params.get("p");
   const daily = dailyPick(Array.from({ length: len }), offset).index;
-  const [idx, setIdx] = useState<number | null>(p !== null ? Number(p) % len : room ? null : daily);
+  const norm = (v: number) => (v >= WEEKLY_BASE ? v : v % len);
+  const [idx, setIdx] = useState<number | null>(p !== null ? norm(Number(p)) : room ? null : daily);
   useEffect(() => {
-    if (p !== null) { setIdx(Number(p) % len); return; }
+    if (p !== null) { setIdx(norm(Number(p))); return; }
     if (!room) { setIdx(daily); return; }
-    roomPuzzle(room).then((v) => setIdx(v === null ? daily : v % len));
+    roomPuzzle(room).then((v) => setIdx(v === null ? daily : norm(v)));
   }, [room, p, len, daily]);
   return idx;
 }
@@ -72,6 +86,7 @@ export function PuzzleBar({ room, pool }: { room: string | null; pool: Pool }) {
   const go2 = async () => { setBusy(true); await newPuzzle(); setTimeout(() => setBusy(false), 1500); };
   return (
     <div className="puzzle-bar">
+      {pool.current >= WEEKLY_BASE && <WeekTag idx={pool.current} />}
       {flags.length > 0 && <span className="flag-note">⚠️ {flags.join(", ")} already played this one</span>}
       {room && !flags.includes(me) && !pool.done && <button className="pill ghost sm" onClick={flagPlayed}>I already played this</button>}
       <button className={`pill sm ${pool.done || flags.length ? "" : "ghost"}`} disabled={busy} onClick={go2}>{flags.length ? "Swap puzzle" : pool.done ? "Play another" : "New puzzle"}</button>

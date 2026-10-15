@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { go } from "./lib/router";
-import { useLobby, gameUrl, GAME_META, MODE_LABEL } from "./lib/lobby";
+import { useLobby, gameUrl, GAME_META, optsLabel } from "./lib/lobby";
 import { ensurePlayer, getPlayer } from "./lib/player";
 import { playerColor, initials, rememberRoom, rememberPeers, CAPS } from "./lib/fx";
 
@@ -24,7 +24,7 @@ export default function Lobby({ room }: { room: string }) {
     <div className="page lobby">
       <header className="game-header"><button className="back" onClick={() => go("/")}>‹ Lobby</button><h1>{row.name || "Lobby"}</h1><div className="room-bar" /></header>
       <div className="lobby-card">
-        <div className="lobby-meta"><b>{GAME_META[row.game].name}</b> · {MODE_LABEL[row.params.mode]}{row.params.d ? ` · ${row.params.d}` : ""}{row.params.len ? ` · ${row.params.len} min` : ""}</div>
+        <div className="lobby-meta"><b>{GAME_META[row.game].name}</b> · {optsLabel(row.params)}</div>
         {row.code && <div className="code">Code <b>{row.code}</b></div>}
         <div className="players">{players.map((p) => <div key={p} className="player-chip pop-in"><Avatar name={p} /> {p}{p === row.host && " 👑"}</div>)}</div>
         <p className="muted">{players.length}/{cap} players{players.length > cap ? " — room is over capacity" : ""}</p>

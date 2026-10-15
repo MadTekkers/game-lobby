@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { puzzles, matchWord, adjacent, key, ROWS, COLS, type Cell, type StrandsPuzzle } from "./strandsLogic";
 import { usePlayerState, recordResult } from "../lib/shared";
-import { PuzzleBar, GameHeader, Timer, Toast, useToast, usePuzzleIndex } from "./common";
+import { PuzzleBar, GameHeader, Timer, Toast, useToast, usePuzzle } from "./common";
 import { ensurePlayer } from "../lib/player";
 import { Avatar } from "../Lobby";
 import { fmtTime } from "../lib/daily";
@@ -12,10 +12,10 @@ type S = { found: string[]; hints: string[]; startedAt?: number; finishedAt?: nu
 const MAX_HINTS = 3;
 
 export default function StrandsPage({ params }: { params: URLSearchParams }) {
-  const idx = usePuzzleIndex(puzzles.length, params);
-  if (idx === null) return <p className="center muted">Loading puzzle…</p>;
+  const { idx, item } = usePuzzle<StrandsPuzzle>(puzzles, params);
+  if (idx === null || !item) return <p className="center muted">Loading puzzle…</p>;
   const room = params.get("room"); const mode = room ? params.get("mode") || "versus" : "solo";
-  return <Strands key={idx} idx={idx} p={puzzles[idx]} room={room} mode={mode} />;
+  return <Strands key={idx} idx={idx} p={item} room={room} mode={mode} />;
 }
 
 function Strands({ idx, p, room, mode }: { idx: number; p: StrandsPuzzle; room: string | null; mode: string }) {

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import data from "../data/connections.json";
 import { useSharedBoard, recordResult } from "../lib/shared";
-import { PuzzleBar, GameHeader, Timer, Toast, useToast, usePuzzleIndex } from "./common";
+import { PuzzleBar, GameHeader, Timer, Toast, useToast, usePuzzle } from "./common";
 import { ensurePlayer } from "../lib/player";
 import { fmtTime } from "../lib/daily";
 import { confetti, beep, playerColor } from "../lib/fx";
@@ -26,16 +26,15 @@ const COLORS = ["#f9df6d", "#a0c35a", "#b0c4ef", "#ba81c5"]; // NYT yellow, gree
 
 export default function ConnectionsPage({ params }: { params: URLSearchParams }) {
   const d = LISTS[params.get("d") || "easy"] ? params.get("d") || "easy" : "easy";
-  const idx = usePuzzleIndex(LISTS[d].length, params, 0);
-  if (idx === null) return <p className="center muted">Loading puzzle…</p>;
-  return <Connections key={d + idx} idx={idx} d={d} room={params.get("room")} />;
+  const { idx, item } = usePuzzle<Puzzle>(LISTS[d], params, 0);
+  if (idx === null || !item) return <p className="center muted">Loading puzzle…</p>;
+  return <Connections key={d + idx} idx={idx} d={d} puzzle={item} room={params.get("room")} />;
 }
 
 function seededShuffle<T>(a: T[], seed: number) { const r = [...a]; let s = seed; for (let i = r.length - 1; i > 0; i--) { s = (s * 1103515245 + 12345) & 0x7fffffff; const j = s % (i + 1); [r[i], r[j]] = [r[j], r[i]]; } return r; }
 
-function Connections({ idx, d, room }: { idx: number; d: string; room: string | null }) {
+function Connections({ idx, d, puzzle, room }: { idx: number; d: string; puzzle: Puzzle; room: string | null }) {
   useEffect(() => { if (room) ensurePlayer(); }, [room]);
-  const puzzle = LISTS[d][idx];
   const init: S = { solved: [], mistakes: 0, guesses: [] };
   const { state, commit, status, peers, me, setLocalState, applyServer } = useSharedBoard<S>("connections-" + d, idx, init, room);
   const solved = state.solved || [];

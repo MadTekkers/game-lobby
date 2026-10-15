@@ -31,3 +31,21 @@ npm run crossword:generate -- --count 30            # rotates through sizes × d
 npm run crossword:generate -- --count 10 --sizes 15 --difficulties hard
 ```
 Needs `python3` only (stdlib + bundled `scripts/crossword/clues.json`). Every puzzle is validated before insert and deduplicated by grid fingerprint. Credentials come from env or `/workspace/.secrets/game-lobby.env` (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `CROSSWORD_INGEST_SECRET`); inserts go through the `insert_crossword` RPC, which checks a SHA-256-hashed ingest key, so no service-role key is needed and nothing secret ships to the client.
+
+## Weekly puzzles
+
+`npm run weekly` generates a full week (Mon–Sun, America/Chicago) of **new** puzzles for Wordle, Connections (easy/medium/hard), Mini Strands, Spelling Bee and The Mini (difficulty by day: Mon–Tue easy, Wed–Fri medium, Sat–Sun hard) — 49 puzzles per week.
+Each puzzle is validated, de-duplicated against every previous week by fingerprint, and saved to Supabase `weekly_puzzles` via the `insert_weekly` RPC (needs `CROSSWORD_INGEST_SECRET`), so **no redeploy is needed**. Snapshots are committed to `puzzles/weekly/<week>.json`.
+
+```
+npm run weekly                      # ensure current + next week (idempotent)
+npm run weekly -- --backfill 8      # plus the 8 previous weeks
+npm run weekly -- --week 2026-10-12 # one week
+npm run weekly -- --dry-run         # generate + validate only
+```
+
+Crosswords are not weekly — they live in the crossword repository (`npm run crossword:generate`).
+
+**Schedule:** no GitHub Actions. The box crontab runs `scripts/weekly-cron.sh` at `0 1 * * 0` (box TZ America/Los_Angeles = Sunday 3:00 AM Central); it runs `npm run weekly`, then commits and pushes the snapshots. Logs: `/workspace/logs/weekly-*.log`.
+
+**In the app:** setup screens have *Puzzle: This week / Past week ▾ / Classic* plus a *Mon…Sun* day picker (solo, open lobbies, private rooms and share links). Lobbies show the chosen week. `#/archive` browses every week. Weekly puzzles use `p = 100000 + weekly_puzzles.id` in URLs/rooms.

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ANSWERS, score, type Mark } from "./wordleLogic";
 import { usePlayerState, recordResult } from "../lib/shared";
-import { PuzzleBar, GameHeader, Timer, Toast, useToast, usePuzzleIndex } from "./common";
+import { PuzzleBar, GameHeader, Timer, Toast, useToast, usePuzzle } from "./common";
 import { ensurePlayer } from "../lib/player";
 import { fmtTime } from "../lib/daily";
 import { beep, confetti, bumpStreak, CAPS, playerColor } from "../lib/fx";
@@ -13,15 +13,15 @@ let guessSet: Set<string> | null = null;
 const loadGuesses = () => fetch("/wordle-guesses.json").then((r) => r.json()).then((a: string[]) => { guessSet = new Set(a); });
 
 export default function WordlePage({ params }: { params: URLSearchParams }) {
-  const idx = usePuzzleIndex(ANSWERS.length, params, 3);
-  if (idx === null) return <p className="center muted">Loading puzzle…</p>;
+  const { idx, item } = usePuzzle<string>(ANSWERS, params, 3, (d) => d.answer);
+  if (idx === null || !item) return <p className="center muted">Loading puzzle…</p>;
   const room = params.get("room");
-  return <Wordle key={idx} idx={idx} room={room} coop={!!room && params.get("mode") === "coop"} />;
+  return <Wordle key={idx} idx={idx} answer={item} room={room} coop={!!room && params.get("mode") === "coop"} />;
 }
 
-function Wordle({ idx, room, coop }: { idx: number; room: string | null; coop: boolean }) {
+function Wordle({ idx, answer: rawAnswer, room, coop }: { idx: number; answer: string; room: string | null; coop: boolean }) {
   useEffect(() => { if (room) ensurePlayer(); if (!guessSet) loadGuesses(); }, [room]);
-  const answer = ANSWERS[idx];
+  const answer = ANSWERS[0] === ANSWERS[0].toUpperCase() ? rawAnswer.toUpperCase() : rawAnswer.toLowerCase();
   const solo = usePlayerState<S>("wordle", idx, { guesses: [] }, coop ? null : room);
   const shared = useSharedBoard<S>("wordle-coop", idx, { guesses: [] }, coop ? room : null);
   const state: S = coop ? { ...shared.state, guesses: shared.state.guesses || [] } : solo.state;

@@ -182,3 +182,14 @@ body { background: #fff; } .masthead { background: var(--bg-neutral); border-rad
 .ghosts { display: flex; flex-direction: column; gap: 4px; align-items: center; margin: -8px 0 12px; }
 .ghost-row { display: flex; gap: 4px; align-items: center; animation: fadein .2s; } .ghost-name { font-size: 12px; font-weight: 700; width: 64px; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 4px; }
 .ghost-tile { width: 26px; height: 26px; border: 2px dashed; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-weight: 700; text-transform: uppercase; font-size: 14px; opacity: .85; }
+
+/* weekly puzzles */
+.week-tag { font-size: 12px; background: #f0f0ee; border-radius: 999px; padding: 3px 10px; margin-right: 6px; white-space: nowrap; }
+.seg.days, .seg.weeks { flex-wrap: wrap; margin-top: 8px; }
+.seg button:disabled { opacity: .35; cursor: not-allowed; }
+.archive-wrap { overflow-x: auto; }
+.archive { border-collapse: collapse; width: 100%; min-width: 640px; }
+.archive th, .archive td { padding: 6px; border-bottom: 1px solid #e3e3e1; text-align: center; font-size: 14px; }
+.archive tbody th { text-align: left; white-space: nowrap; }
+.archive th.today { color: #6aaa64; }
+.arch-cell { display: inline-flex; gap: 4px; }

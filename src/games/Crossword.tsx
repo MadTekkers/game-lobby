@@ -3,7 +3,7 @@ import { CROSSWORDS, type CW } from "./puzzleData";
 import { supabase } from "../lib/supabase";
 import { getCrossword, pickCrossword, LEN_TO_SIZE, markPlayed } from "../lib/crosswordRepo";
 import { usePlayerState, useSharedBoard, recordResult } from "../lib/shared";
-import { PuzzleBar, GameHeader, Timer, Toast, useToast, usePuzzleIndex } from "./common";
+import { PuzzleBar, GameHeader, Timer, Toast, useToast, usePuzzle } from "./common";
 import { Avatar } from "../Lobby";
 import { fmtTime } from "../lib/daily";
 import { initials, beep, confetti, bumpStreak, playerColor, CAPS } from "../lib/fx";
@@ -19,11 +19,11 @@ export default function CrosswordPage({ params, mini }: { params: URLSearchParam
 function MiniPage({ params }: { params: URLSearchParams }) {
   const d = ["easy", "medium", "hard"].includes(params.get("d") || "") ? params.get("d")! : "easy";
   const listKey = `mini-${d}`; const list = CROSSWORDS[listKey] || [];
-  const idx = usePuzzleIndex(Math.max(list.length, 1), params);
+  const { idx, item } = usePuzzle<CW>(list.length ? list : [null as unknown as CW], params);
   if (!list.length) return <p className="center muted">No puzzles for this setting yet.</p>;
-  if (idx === null) return <p className="center muted">Loading puzzle…</p>;
+  if (idx === null || !item) return <p className="center muted">Loading puzzle…</p>;
   const room = params.get("room"); const mode = room ? params.get("mode") || "coop" : "solo";
-  return <Crossword key={listKey + idx} cw={list[idx]} idx={idx} listKey={listKey} room={room} mode={mode} title="The Mini" game="mini" />;
+  return <Crossword key={listKey + idx} cw={item} idx={idx} listKey={listKey} room={room} mode={mode} title="The Mini" game="mini" />;
 }
 
 /** Big crosswords come from the Supabase repository (grows without redeploys). */
