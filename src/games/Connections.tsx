@@ -9,7 +9,7 @@ import { FitText } from "../lib/FitText";
 import { supabase } from "../lib/supabase";
 
 type Group = { level: number; category: string; words: string[] };
-type Puzzle = { id: number; groups: Group[] };
+type Puzzle = { id?: number; gen?: number; groups: Group[] };
 // @ts-ignore - plain JS generator shared with scripts/
 import { makePuzzle } from "../../scripts/connectionsGen.mjs";
 import { dayIndex } from "../lib/daily";
@@ -36,7 +36,7 @@ function seededShuffle<T>(a: T[], seed: number) { const r = [...a]; let s = seed
 function Connections({ idx, d, puzzle, room }: { idx: number; d: string; puzzle: Puzzle; room: string | null }) {
   useEffect(() => { if (room) ensurePlayer(); }, [room]);
   const init: S = { solved: [], mistakes: 0, guesses: [] };
-  const { state, commit, status, peers, me, setLocalState, applyServer } = useSharedBoard<S>("connections-" + d, idx, init, room);
+  const { state, commit, status, peers, me, setLocalState, applyServer } = useSharedBoard<S>("connections-" + d + (puzzle.gen === 2 ? "-v2" : ""), idx, init, room); // v2 content gets fresh saved state
   const solved = state.solved || [];
   const [order, setOrder] = useState(() => seededShuffle(puzzle.groups.flatMap((g) => g.words), idx + 1));
   const [localSel, setLocalSel] = useState<string[]>([]);
@@ -111,7 +111,7 @@ function Connections({ idx, d, puzzle, room }: { idx: number; d: string; puzzle:
   return (
     <div className="game connections">
       <GameHeader title={`Connections · ${d}`} game="connections" puzzleId={idx} room={room} status={status} peers={peers} />
-      <PuzzleBar room={room} pool={{ key: `connections-${d}`, size: LISTS[d].length, current: idx, done }} />
+      <PuzzleBar room={room} pool={{ key: `connections-${d}${puzzle.gen === 2 && idx < 100000 ? "-v2" : ""}`, size: LISTS[d].length, current: idx, done }} />
       <div className="strands-status"><span className="muted">Create four groups of four!</span><Timer startedAt={state.startedAt} finishedAt={state.finishedAt} /></div>
       <div className="c-board">
         {solved.map((g) => { const G = puzzle.groups[g]; return (

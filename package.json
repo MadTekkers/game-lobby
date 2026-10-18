@@ -11,7 +11,11 @@
     "test": "vitest run",
     "weekly": "node scripts/weekly.mjs",
     "smoke": "node --env-file=.env.local scripts/smokeMultiplayer.mjs",
-    "crossword:generate": "python3 scripts/crossword/repo_generate.py"
+    "crossword:generate": "python3 scripts/crossword/repo_generate.py",
+    "connections:audit": "node scripts/connectionsAudit.mjs",
+    "connections:validate": "node scripts/validateConnections.mjs",
+    "connections:regen": "node scripts/regenConnections.mjs",
+    "connections:classic": "node scripts/genConnectionsClassic.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

@@ -6,8 +6,7 @@
 //   npm run weekly -- --week 2026-10-12  -> one specific week (Monday date)
 //   npm run weekly -- --dry-run          -> generate + validate, print counts, write nothing
 import fs from "fs"; import path from "path"; import { execFileSync } from "child_process"; import { fileURLToPath } from "url";
-import { makePuzzle } from "./connectionsGen.mjs"; import { mediumBank } from "./connectionsMediumBank.mjs";
-import { makeHard } from "./weekly/connectionsHardBank.mjs";
+import { weekCtx, genSlot, groupKey } from "./weekly/connectionsWeek.mjs";
 import { loadThemes, makeBoard, validateBoard, rng } from "./weekly/strandsGen.mjs";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2); const flag = (f) => args.includes(f); const val = (f) => { const i = args.indexOf(f); return i >= 0 ? args[i + 1] : null; };
@@ -72,6 +71,8 @@ function beeFor(seed, usedSets) {
 }
 
 const rows = await existing();
+const connRows = URL_ ? await (await fetch(`${URL_}/rest/v1/weekly_puzzles?select=week_start,day,difficulty,data&game=eq.connections&limit=10000`, { headers: H })).json() : [];
+const connGroups = new Set(connRows.flatMap((r) => r.data.groups.map(groupKey)));
 const have = new Set(rows.map((r) => `${r.week_start}|${r.game}|${r.difficulty}|${r.day}`));
 const fps = new Map(); for (const r of rows) { const k = r.game + "|" + r.difficulty; if (!fps.has(k)) fps.set(k, new Set()); fps.get(k).add(r.fingerprint); }
 const fpSet = (g, d) => { const k = g + "|" + d; if (!fps.has(k)) fps.set(k, new Set()); return fps.get(k); };
@@ -95,12 +96,13 @@ for (const week of weeks) {
     if (!guesses.has(a)) throw new Error("answer not in guess list " + a);
     await add(day, "wordle", "", { answer: a }, avail.length ? a : a + "@" + week);
   }
-  // Connections easy / medium / hard
-  for (const [diff, gen] of [["easy", (s) => makePuzzle(s)], ["medium", (s) => makePuzzle(s, mediumBank)], ["hard", (s) => makeHard(s)]]) {
-    for (let day = 0; day < 7; day++) if (need("connections", diff, day)) {
-      let p, fp, s = seedOf(week, diff + day);
-      for (let t = 0; t < 400; t++, s++) { p = gen(s); fp = p.groups.flatMap((g) => g.words).sort().join("|"); if (!fpSet("connections", diff).has(fp)) break; }
-      vConn(p); delete p.id; await add(day, "connections", diff, p, fp);
+  // Connections easy / medium / hard: v2 generator with type quotas, red herrings and per-week variety (see scripts/weekly/connectionsGen2.mjs)
+  {
+    const wc = weekCtx(connRows.filter((r) => r.week_start === week)); const hr = rng(seedOf(week, "hidden"));
+    for (const diff of ["easy", "medium", "hard"]) for (let day = 0; day < 7; day++) if (need("connections", diff, day)) {
+      const { data, fp } = genSlot(diff, seedOf(week, `${diff}${day}v2`), wc, fpSet("connections", diff), connGroups, hr);
+      vConn(data); await add(day, "connections", diff, data, fp);
+      connRows.push({ week_start: week, day, difficulty: diff, data });
     }
   }
   // Mini Strands: least-used themes first, new boards every time

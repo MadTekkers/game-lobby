@@ -46,6 +46,24 @@ npm run weekly -- --dry-run         # generate + validate only
 
 Crosswords are not weekly — they live in the crossword repository (`npm run crossword:generate`).
 
-**Schedule:** no GitHub Actions. The box crontab runs `scripts/weekly-cron.sh` at `0 1 * * 0` (box TZ America/Los_Angeles = Sunday 3:00 AM Central); it runs `npm run weekly`, then commits and pushes the snapshots. Logs: `/workspace/logs/weekly-*.log`.
+**Schedule:** no GitHub Actions. The box crontab runs `scripts/weekly-cron.sh` at `0 3 * * 0` (box TZ America/Chicago = Sunday 3:00 AM Central); it runs `npm run weekly`, then commits and pushes the snapshots. Logs: `/workspace/logs/weekly-*.log`.
 
 **In the app:** setup screens have *Puzzle: This week / Past week ▾ / Classic* plus a *Mon…Sun* day picker (solo, open lobbies, private rooms and share links). Lobbies show the chosen week. `#/archive` browses every week. Weekly puzzles use `p = 100000 + weekly_puzzles.id` in URLs/rooms.
+
+## Connections generator v2 (category types, quotas, red herrings)
+
+Categories live in `scripts/weekly/connectionsBank2.txt` (`type|level|category|WORDS`, ~270 categories). Types (`scripts/weekly/connectionsTypes.mjs`):
+set, trivia, brand, jargon (sports/game terms), people, synonym, property ("things with…"), compound (___BALL), phrase (Break the ___), members (___ Bowl),
+and the wordplay types homophone, hidden, anagram, letter.
+
+Rules enforced by `scripts/weekly/connectionsGen2.mjs` + `connectionsWeek.mjs`:
+- at most **one wordplay group** per puzzle (none in easy); each type at most once per puzzle (sets/trivia at most twice)
+- **hidden-word groups in at most ~1 in 10 puzzles** (max 2 of the 21 Connections puzzles a week)
+- within a week: no category reused (any difficulty), no repeated type pattern and no repeated purple type per difficulty
+- exactly one valid solution (checked against every category's full word list) and conflict pairs (e.g. "Things with wings" + "Birds") never share a board
+- medium: purple-level group + **≥1 red herring**; hard: two level-2/3 groups + **≥2 red herrings**
+- no puzzle repeated across weeks; exact groups not reused when avoidable
+
+Tools: `npm run connections:audit` (type mix per source), `npm run connections:validate` (checks every weekly puzzle in Supabase),
+`npm run connections:regen -- --weeks 2026-10-19 --diffs medium,hard` (in-place regeneration; never touches puzzles with a recorded result or room),
+`npm run connections:classic` (rebuilds the bundled classic medium/hard lists).
