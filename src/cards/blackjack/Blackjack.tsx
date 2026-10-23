@@ -110,6 +110,14 @@ export default function BlackjackPage({ params }: { params: URLSearchParams }) {
   const placeBet = () => { const a = Math.max(pub!.minBet, Math.min(bet, pub!.maxBet, me!.stack)); localStorage.setItem("bj_bet", String(a)); setCoach(null); T.act({ t: "bet", amount: a }); };
   const newTable = () => go(gameUrl({ game: "blackjack", mode: live ? "live" : "solo", seats, bot, train: train ? 1 : undefined, tut: tutorial ? 1 : undefined }) + `&n=${Date.now()}`);
 
+  // the "below" action bar follows the active hand (e.g. after a split): centre it on that hand's cards
+  useLayoutEffect(() => {
+    const bar = document.querySelector<HTMLElement>(".bjt .bj-acts.below"); if (!bar || !pub || seat < 0) return;
+    const k = myTurn ? pub.turn!.hand : 0;
+    const h = document.getElementById(`bj-s${seat}-h${k}`) ?? document.querySelector<HTMLElement>(".bj-seat.mine"); const t = bar.parentElement;
+    if (!h || !t) return; const hr = h.getBoundingClientRect(), tr = t.getBoundingClientRect();
+    bar.style.setProperty("--x", `${Math.round(hr.left + hr.width / 2 - tr.left)}px`);
+  });
   if (!pub) return <div className="game bj"><GameHeader title="Blackjack" game="blackjack" room={live ? room : null} status="connecting" /><p className="center muted">{T.err || "Shuffling a fresh 6-deck shoe…"}</p></div>;
 
   const dealKey = pub.phase === "betting" ? pub.round - 1 : pub.round;
@@ -148,6 +156,7 @@ export default function BlackjackPage({ params }: { params: URLSearchParams }) {
           {s.hands.length === 0 ? <div className="bj-empty">{pub.phase === "betting" ? (s.decided ? (s.bet ? "" : "Sitting out") : s.kind === "human" ? (mine ? "" : "Betting…") : "") : ""}</div> :
             s.hands.map((h, k) => (
               <div key={`${dealKey}-${k}`} id={`bj-s${i}-h${k}`} className={`bj-hand ${pub.turn?.seat === i && pub.turn.hand === k ? "active" : ""}`}>
+                {mine && k === activeHandIdx && actsSide}
                 <div className="pc-row">{h.cards.map((c, ci) => <PlayingCard key={`${c}-${ci}`} card={c} small={!mine} fly={flyFor(i, k, ci, true)} rot={h.doubled && ci === 2} />)}</div>
                 <div className="bj-hand-f"><span className="tot">{totalText(h.cards)}</span>{s.hands.length > 1 && <span className="chip">{h.bet}{h.doubled ? "×2" : ""}</span>}{h.result && <span className={`res ${h.result}`}>{RESULT[h.result]}</span>}</div>
               </div>))}
@@ -158,7 +167,6 @@ export default function BlackjackPage({ params }: { params: URLSearchParams }) {
           {(s.insurance ?? 0) > 0 && <span className="ins" title="Insurance">INS {s.insurance}</span>}
         </div>
         <div className="bj-plate"><Avatar name={s.name} size={mine ? 22 : 18} /><b className="nm">{mine ? "You" : s.name}</b><span className="stack">{fmt(s.stack)}</span></div>
-        {mine && actsSide}
         {s.pending && <div className="tiny pend">↪ {s.pending.name} next hand</div>}
         {pub.turn?.seat === i && secsLeft !== null && <div className="clock"><i style={{ width: `${Math.min(100, (secsLeft / 30) * 100)}%` }} /></div>}
       </div>
@@ -185,7 +193,7 @@ export default function BlackjackPage({ params }: { params: URLSearchParams }) {
   );
 
   const table = (
-    <div className={`bjt n${n}`} data-felt="30,109,68">
+    <div className={`bjt n${n} ${actsInner ? "acting" : ""}`} data-felt="30,109,68">
       <div className="bjt-felt" aria-hidden />
       <div className="bj-rack" id="bj-rack" aria-hidden>{["c500", "c100", "c25", "c10", "c5", "c100", "c25", "c500"].map((c, z) => <i key={z} className={`col ${c}`} />)}</div>
       <div className="bj-discard" aria-label={`Discard tray: ${used} cards`} title="Discard tray"><span className="tray"><i style={{ height: `${Math.min(100, (used / pub.shoeSize) * 100 * 1.4)}%` }} /></span><span className="tiny lbl">Discards</span></div>
