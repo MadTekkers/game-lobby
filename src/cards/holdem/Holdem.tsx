@@ -207,7 +207,7 @@ export default function HoldemPage({ params }: { params: URLSearchParams }) {
   );
   const panel = (tutorial || train) && pub.phase !== "waiting" && (() => {
     const tabs: PanelTab[] = [];
-    if (tutorial) tabs.push({ id: "tips", label: "📘 Tips", peek: hotTerm ? `${hotTerm.icon} ${hotTerm.title}: ${hotTerm.body}` : null, body: (<>
+    if (tutorial) tabs.push({ id: "tips", label: "📘 Tips", peek: myTurn ? "📘 Your turn — open for Beginner → Expert tips and the Peek odds" : hotTerm ? `${hotTerm.icon} ${hotTerm.title}: ${hotTerm.body}` : null, body: (<>
       {hotTerm && <div className="lc-now"><span className="tiny">Right now at the table</span><div className="lc open hot"><span className="lc-t">{hotTerm.icon} {hotTerm.title}</span><span className="lc-b">{hotTerm.body}</span></div></div>}
       {myTurn ? <TutorTips tips={tipsV} busy={thinking} sample="Tutorial table: every hole card is face-up. Beginner→Expert use only what you'd know at a real table (opponent ranges from their actions); Peek uses the actual hands." />
         : <p className="small">Tips for your decision appear here when it's your turn.</p>}

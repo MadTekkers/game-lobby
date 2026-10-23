@@ -19,6 +19,7 @@ for (const [label, q, W] of [["train6", "seats=6&bot=hard&train=1", 360], ["tut4
         if (!shot) { shot = true; await p.screenshot({ path: `/workspace/screenshots/holdem-${label}-coach.png`, fullPage: true }); }
         await p.locator(".coach-h .x").click(); continue; }
       if (await p.locator(".pk-actions").count()) {
+        if (label.startsWith("tut") && !(await p.locator(".side-panel.open, .side-panel.wide").count()) && await p.locator(".sp-toggle").count()) await p.locator(".sp-toggle").click().catch(() => {});
         if (await p.locator(".tutor-row").count()) { tipsSeen++; if (!shot) { shot = true; await p.waitForTimeout(800); await p.screenshot({ path: `/workspace/screenshots/holdem-${label}-tips.png`, fullPage: true }); } }
         const btn = acts % 3 === 2 && (await p.locator(".pk-raise .controls button.pill:not(.sm)").count()) ? p.locator(".pk-raise .controls button.pill:not(.sm)") : p.locator('.pk-actions button:has-text("Call"), .pk-actions button:has-text("Check")').first();
         if (!(await btn.click({ timeout: 2000 }).then(() => true, () => false))) continue; acts++; await p.waitForTimeout(label.startsWith("tut") ? 600 : 1500); continue;
