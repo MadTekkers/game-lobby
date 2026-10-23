@@ -23,7 +23,7 @@ for (const spec of (process.env.SHOTS || "").split("||").filter(Boolean)) {
         else if (k === "try") await p.click(v, { timeout: 4000 }).catch(() => {});
         else if (k === "wait") await p.waitForSelector(v, { timeout: 30000 });
         else if (k === "sleep") await p.waitForTimeout(Number(v));
-        else if (k === "eval") await p.evaluate(v);
+        else if (k === "eval") { const r = await p.evaluate(v); if (r !== undefined) console.log("eval", JSON.stringify(r)); }
         else if (k === "shot") { const f = `${OUT}/${label}-${v}-${w}.png`; await p.screenshot({ path: f, fullPage: process.env.FULL === "1" }); console.log("shot", f); }
       } catch (e) { console.log(label, w, "step failed", st, String(e).split("\n")[0]); }
     }

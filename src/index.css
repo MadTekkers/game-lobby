@@ -98,7 +98,7 @@ footer { margin-top: 32px; }
 body { background: #fff; } .masthead { background: var(--bg-neutral); border-radius: 0 0 10px 10px; }
 .c-tile { background: #efefe6; }
 /* ===== Lobby / fun UI ===== */
-.route-fade { animation: fadeup .25s ease both; } @keyframes fadeup { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
+.route-fade { animation: fadeup .25s ease backwards; } @keyframes fadeup { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: none } }
 .card { animation: fadeup .35s ease both; cursor: default; }
 .card:hover { transform: translateY(-4px) rotate(-.3deg); box-shadow: 0 10px 24px rgba(0,0,0,.1); }
 .card:hover .icon { transform: scale(1.15) rotate(-6deg); } .icon { transition: transform .25s; font-size: 48px; text-shadow: none; }
