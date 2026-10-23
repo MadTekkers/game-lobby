@@ -185,7 +185,7 @@ export default function BlackjackPage({ params }: { params: URLSearchParams }) {
   );
 
   const table = (
-    <div className={`bjt n${n}`}>
+    <div className={`bjt n${n}`} data-felt="30,109,68">
       <div className="bjt-felt" aria-hidden />
       <div className="bj-rack" id="bj-rack" aria-hidden>{["c500", "c100", "c25", "c10", "c5", "c100", "c25", "c500"].map((c, z) => <i key={z} className={`col ${c}`} />)}</div>
       <div className="bj-discard" aria-label={`Discard tray: ${used} cards`} title="Discard tray"><span className="tray"><i style={{ height: `${Math.min(100, (used / pub.shoeSize) * 100 * 1.4)}%` }} /></span><span className="tiny lbl">Discards</span></div>

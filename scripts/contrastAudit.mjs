@@ -23,8 +23,8 @@ for (const [label, route] of PAGES) {
     const over = (top, under) => { const a = top[3]; return [top[0] * a + under[0] * (1 - a), top[1] * a + under[1] * (1 - a), top[2] * a + under[2] * (1 - a), 1]; };
     // all candidate opaque backgrounds behind el (list because gradients give several)
     const bgs = (el) => { const chain = []; for (let e = el; e; e = e.parentElement) chain.push(e);
-      let layers = [[255, 255, 255, 1]];
-      for (const e of chain.reverse()) { const cs = getComputedStyle(e); const img = cs.backgroundImage; const col = parse(cs.backgroundColor);
+      const felt = el.closest("[data-felt]"); let layers = [felt ? [...felt.dataset.felt.split(",").map(Number), 1] : [255, 255, 255, 1]];
+      for (const e of chain.reverse()) { if (felt && !felt.contains(e)) continue; const cs = getComputedStyle(e); const img = cs.backgroundImage; const col = parse(cs.backgroundColor);
         if (img && img !== "none" && img.includes("gradient")) { const st = stops(img).filter(Boolean); if (st.length) layers = st.flatMap((s) => layers.map((l) => over(s, l))); }
         else if (col && col[3] > 0) layers = layers.map((l) => over(col, l)); }
       return layers; };

@@ -176,7 +176,7 @@ export default function HoldemPage({ params }: { params: URLSearchParams }) {
       </div>
     </div>
   ) : (
-    <div className={`pkt n${n}`}>
+    <div className={`pkt n${n}`} data-felt="30,109,68">
       <div className="pkt-oval" aria-hidden />
       <div className="pk-center">
         <div className="pk-dk"><span className="pk-deck" id="pk-deck" title="Deck" /><span className="tiny">Deck</span></div>

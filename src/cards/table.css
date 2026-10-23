@@ -53,7 +53,7 @@
 .shoe-box { position: relative; display: block; width: 46px; height: 34px; background: linear-gradient(160deg, #3a2a1c, #1b120b); border-radius: 4px 10px 4px 4px; transform: skewX(-8deg); box-shadow: 0 3px 6px rgba(0,0,0,.4); }
 .shoe-card { position: absolute; left: 4px; top: 5px; width: 26px; height: 24px; border-radius: 3px; border: 2px solid #fff; background: repeating-linear-gradient(45deg, #4f85e5 0 3px, #3d6fc7 3px 6px); }
 .bj-shoe .lbl, .bj-discard .lbl { color: #fff; font-weight: 700; }
-.shoe-tg { border: 1px solid rgba(255,255,255,.7); background: rgba(0,0,0,.4); color: #fff; border-radius: 999px; font-size: 11px; font-weight: 700; padding: 3px 8px; }
+.shoe-tg { border: 1px solid rgba(255,255,255,.7); background: #0b2f1c; color: #fff; border-radius: 999px; font-size: 11px; font-weight: 700; padding: 3px 8px; }
 .tut-next { display: flex; margin-top: 2px; padding: 3px; background: rgba(0,0,0,.35); border-radius: 6px; } .tut-next .pc.sm { width: 26px; height: 38px; } .tut-next .pc.sm + .pc.sm { margin-left: -12px; } .tut-next .pc.sm .pc-s { font-size: 11px; } .tut-next .pc.sm .pc-r { font-size: 11px; }
 .bj-discard { position: absolute; top: 10px; left: 7%; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; z-index: 3; }
 .bj-discard .tray { display: flex; align-items: flex-end; width: 30px; height: 34px; border: 2px solid rgba(0,0,0,.45); border-radius: 4px; background: rgba(0,0,0,.25); padding: 2px; }
@@ -77,7 +77,7 @@
 .bj-circle .stackc .disc { position: absolute; left: 0; }
 .bj-circle .amt { position: absolute; bottom: -7px; background: #121212; color: #fff; font-size: 10px; border-radius: 999px; padding: 0 5px; line-height: 14px; white-space: nowrap; }
 .bj-circle .ins { position: absolute; right: -30px; top: 2px; font-size: 9px; font-weight: 800; background: #f9df6d; color: #121212; border-radius: 4px; padding: 0 3px; }
-.bj-plate { display: flex; align-items: center; gap: 4px; max-width: 100%; background: rgba(0,0,0,.55); border-radius: 999px; padding: 2px 7px 2px 2px; font-size: 11px; margin-top: 4px; }
+.bj-plate { display: flex; align-items: center; gap: 4px; max-width: 100%; background: #0f2419; border-radius: 999px; padding: 2px 7px 2px 2px; font-size: 11px; margin-top: 4px; }
 .bjs.mine .bj-plate { background: #121212; font-size: 12px; box-shadow: 0 0 0 1px rgba(255,255,255,.5); }
 .bjs.turn .bj-plate { box-shadow: 0 0 0 2px #f9df6d; }
 .bj-plate .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
@@ -164,21 +164,21 @@
 .pkt .pk-board { margin: 0; flex-direction: row; }
 .pkt .pk-cards5 { gap: 4px; min-height: 46px; } .pkt .pk-cards5 .pc.sm, .pkt .pk-slot { width: 32px; height: 46px; }
 .pkt .pk-slot { border-color: rgba(255,255,255,.28); }
-.pkt .pk-pot { position: relative; display: flex; align-items: center; gap: 6px; background: rgba(0,0,0,.32); border-radius: 999px; padding: 3px 10px; font-size: 13px; max-width: 280px; text-align: center; }
+.pkt .pk-pot { position: relative; display: flex; align-items: center; gap: 6px; background: #0b2f1c; border-radius: 999px; padding: 3px 10px; font-size: 13px; max-width: 280px; text-align: center; }
 .pkt .pk-pot .sub { color: #e4f2e9; font-size: 11px; }
 .pkt .pk-pot .stk, .pk-betstack .stk { position: relative; display: inline-block; width: 16px; height: 16px; flex: none; }
 .pkt .stk .disc { position: absolute; left: 0; width: 16px; height: 16px; border-width: 2px; }
 .pk-street { color: #e4f2e9; }
-.pks { position: absolute; transform: translate(-50%, -50%); width: 84px; padding: 4px 3px; z-index: 3; background: rgba(10,30,20,.82); border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,.35); }
+.pks { position: absolute; transform: translate(-50%, -50%); width: 84px; padding: 4px 3px; z-index: 3; background: #0c2418; border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,.35); }
 .pks .pk-cards { margin: 0 0 2px; min-height: 37px; }
 .pk-plate { display: flex; align-items: center; gap: 3px; justify-content: center; min-width: 0; }
 .pk-plate .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; font-size: 11px; }
 .pk-plate .stack { color: #f9df6d; font-variant-numeric: tabular-nums; font-size: 11px; margin-left: 2px; }
 .pks .pk-act { font-size: 10px; min-height: 12px; }
-.pks.out .pk-cards { opacity: .45; } .pks.out { background: rgba(10,30,20,.6); } .pks.turn { box-shadow: 0 0 0 2px #f9df6d, 0 2px 8px rgba(0,0,0,.4); }
+.pks.out .pk-cards { opacity: 1; filter: grayscale(.85) brightness(.97); } .pks.out .avatar { opacity: 1; filter: grayscale(.6); } .pks.out { background: #123222; } .pks.turn { box-shadow: 0 0 0 2px #f9df6d, 0 2px 8px rgba(0,0,0,.4); }
 .pks.won { box-shadow: 0 0 0 2px #9fe08f, 0 0 14px rgba(159,224,143,.6); }
 .pks .pend { color: #e4f2e9; }
-.pks.pk-me { width: 150px; background: rgba(10,30,20,.88); box-shadow: inset 0 0 0 1px rgba(255,255,255,.4), 0 2px 8px rgba(0,0,0,.4); padding: 6px; z-index: 4; }
+.pks.pk-me { width: 150px; background: #0c2418; box-shadow: inset 0 0 0 1px rgba(255,255,255,.4), 0 2px 8px rgba(0,0,0,.4); padding: 6px; z-index: 4; }
 .pks.pk-me.turn { box-shadow: 0 0 0 3px #f9df6d, 0 0 16px rgba(249,223,109,.5); }
 .pks.pk-me .pk-cards { min-height: 58px; } .pks.pk-me .pk-cards .pc { width: 42px; height: 58px; } .pks.pk-me .pc-row { gap: 4px; }
 .pks.pk-me .pk-plate .nm, .pks.pk-me .pk-plate .stack { font-size: 13px; }
