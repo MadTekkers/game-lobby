@@ -17,7 +17,9 @@ export type BJState = {
   game: "blackjack"; seats: Seat[]; shoe: Card[]; decks: number; dealer: Card[]; holeHidden: boolean;
   phase: "betting" | "insurance" | "play"; turn: { seat: number; hand: number } | null; round: number;
   minBet: number; maxBet: number; deadline: number | null; timeoutMs: number; botLevel: Level;
-  log: Ev[]; ledger: Ledger[]; results: { seat: number; name: string; kind: string; bet: number; net: number; hands: Hand[] }[]; reshuffled: boolean; startedAt: number; tutorial?: boolean; live?: boolean;
+  log: Ev[]; ledger: Ledger[]; results: { seat: number; name: string; kind: string; bet: number; net: number; hands: Hand[] }[]; reshuffled: boolean; startedAt: number;
+  /** Hi-Lo running count of every card exposed in finished rounds of this shoe (public info: all of them were face up). */
+  rc?: number; tutorial?: boolean; live?: boolean;
 };
 export type Move = { t: "bet"; amount: number } | { t: "sitout" } | { t: "insurance"; take: boolean } | { t: Action };
 export type Ctx = { rng: Rng; now: number };
@@ -46,6 +48,8 @@ const debit = (s: BJState, i: number, amt: number, reason: string) => {
 const credit = (s: BJState, i: number, amt: number, reason: string) => {
   if (amt <= 0) return; const seat = s.seats[i]; seat.stack += amt; if (seat.kind === "human") s.ledger.push({ seat: i, name: seat.name, delta: amt, reason });
 };
+/** Hi-Lo tag: 2-6 = +1, 7-9 = 0, tens and aces = -1. */
+export const hiLoTag = (c: Card) => { const v = cardValue(c); return v >= 2 && v <= 6 ? 1 : v >= 10 ? -1 : 0; };
 function draw(s: BJState, ctx: Ctx): Card {
   if (!s.shoe.length) { s.shoe = shuffle(makeDeck(s.decks), ctx.rng); s.reshuffled = true; }
   return s.shoe.shift()!;
@@ -117,7 +121,9 @@ export function apply(s0: BJState, i: number, m: Move, ctx: Ctx): BJState {
 
 function deal(s: BJState, ctx: Ctx) {
   s.reshuffled = false;
-  if (s.shoe.length < s.decks * 52 * 0.25) { s.shoe = shuffle(makeDeck(s.decks), ctx.rng); s.reshuffled = true; log(s, { t: "shuffle", text: "Fresh 6-deck shoe" }, ctx.now); }
+  const shown = [...s.seats.flatMap((x) => x.hands.flatMap((h) => h.cards)), ...(s.holeHidden ? s.dealer.slice(0, 1) : s.dealer)];
+  s.rc = (s.rc ?? 0) + shown.reduce((a, c) => a + hiLoTag(c), 0);
+  if (s.shoe.length < s.decks * 52 * 0.25) { s.shoe = shuffle(makeDeck(s.decks), ctx.rng); s.reshuffled = true; s.rc = 0; log(s, { t: "shuffle", text: "Fresh 6-deck shoe" }, ctx.now); }
   s.results = []; s.dealer = []; s.holeHidden = true;
   for (const seat of s.seats) { seat.inRound = seat.bet > 0; seat.hands = seat.inRound ? [{ cards: [], bet: seat.bet }] : []; seat.insurance = null; }
   for (let k = 0; k < 2; k++) {
@@ -246,7 +252,7 @@ export function publicView(s: BJState) {
   return {
     tutorial: tut, holeHidden: s.holeHidden, next: tut ? s.shoe.slice(0, 4) : null, tutDealer: tut ? s.dealer : null,
     game: s.game, phase: s.phase, round: s.round, turn: s.turn, minBet: s.minBet, maxBet: s.maxBet, deadline: s.deadline, botLevel: s.botLevel,
-    shoeLeft: s.shoe.length, shoeSize: s.decks * 52, reshuffled: s.reshuffled,
+    shoeLeft: s.shoe.length, shoeSize: s.decks * 52, reshuffled: s.reshuffled, rcPrev: s.rc ?? 0,
     dealer: s.holeHidden && s.dealer.length ? [s.dealer[0], null] : s.dealer,
     seats: s.seats.map(({ tokenHash: _t, pending, ...x }) => ({ ...x, pending: pending ? { name: pending.name } : null })),
     results: s.results, log: s.log.slice(-25),
