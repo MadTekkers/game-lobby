@@ -5,8 +5,9 @@ import { fmtTime } from "./lib/daily";
 import { getPlayer } from "./lib/player";
 import { isActive } from "./lib/lobby";
 
-type Row = { player: string; game: string; puzzle_id: number; won: boolean; mistakes: number; hints: number; seconds: number; created_at: string; room_id: string | null };
-const NAMES: Record<string, string> = { strands: "Mini Strands", wordle: "Wordle", connections: "Connections", crossword: "Crossword", mini: "The Mini", bee: "Spelling Bee" };
+type Row = { player: string; game: string; puzzle_id: number; won: boolean; mistakes: number; hints: number; seconds: number; created_at: string; room_id: string | null; detail?: any };
+const NAMES: Record<string, string> = { strands: "Mini Strands", wordle: "Wordle", connections: "Connections", crossword: "Crossword", mini: "The Mini", bee: "Spelling Bee", spywords: "Spy Words" };
+const spyLabel = (r: Row) => { const d = r.detail || {}; const w = d.mode === "duet" ? (d.winner === "team" ? "Agents won" : "Agents lost") : `${d.winner === "red" ? "Red" : "Blue"} won`; return `${d.mode === "duet" ? "Duo" : "Classic"} · ${w} · ${d.turns ?? r.hints} turns${d.role ? ` · ${d.team ? d.team + " " : ""}${d.role}` : ""}`; };
 
 export default function History({ params }: { params: URLSearchParams }) {
   const room = params.get("room");
@@ -38,7 +39,7 @@ export default function History({ params }: { params: URLSearchParams }) {
               {board(g).length === 0 && <tr><td className="muted">No wins yet</td></tr>}</tbody></table></div>))}</div>
         <h2 className="section">All games</h2>
         <table className="tbl"><thead><tr><th>When</th><th>Player</th><th>Game</th><th>Result</th><th>Time</th></tr></thead>
-          <tbody>{rows.map((r, i) => <tr key={i}><td className="muted">{new Date(r.created_at).toLocaleString()}</td><td>{r.player}</td><td>{NAMES[r.game]} #{r.puzzle_id + 1}</td><td>{r.won ? "✅ Won" : "❌ Lost"}</td><td>{fmtTime(r.seconds)}</td></tr>)}</tbody></table>
+          <tbody>{rows.map((r, i) => <tr key={i}><td className="muted">{new Date(r.created_at).toLocaleString()}</td><td>{r.player}</td><td>{r.game === "spywords" ? <>{NAMES[r.game]} <span className="muted small">{spyLabel(r)}</span></> : <>{NAMES[r.game]} #{r.puzzle_id + 1}</>}</td><td>{r.won ? "✅ Won" : "❌ Lost"}</td><td>{fmtTime(r.seconds)}</td></tr>)}</tbody></table>
       </>)}
     </div>
   );

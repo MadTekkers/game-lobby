@@ -3,7 +3,7 @@ import { supabase } from "./supabase";
 import { getPlayer, newRoomId } from "./player";
 
 export type Mode = "solo" | "versus" | "coop";
-export type GameId = "strands" | "wordle" | "connections" | "crossword" | "mini" | "bee";
+export type GameId = "strands" | "wordle" | "connections" | "crossword" | "mini" | "bee" | "spywords";
 export type Opts = { game: GameId; mode: Mode; d?: string; len?: string; p?: number; cw?: number; wk?: string; day?: number };
 export type GameStatus = "active" | "archived";
 /** status "archived" hides a game from the lobby, pickers, archive and history (code/routes/data kept). Restore = set back to "active". */
@@ -14,6 +14,7 @@ export const GAME_META: Record<GameId, { name: string; status: GameStatus; modes
   crossword: { name: "Crossword", status: "archived", modes: ["solo", "versus", "coop"], difficulty: true, length: true },
   mini: { name: "The Mini", status: "active", modes: ["solo", "versus", "coop"], difficulty: true },
   bee: { name: "Spelling Bee", status: "archived", modes: ["solo", "versus", "coop"] },
+  spywords: { name: "Spy Words", status: "active", modes: ["versus", "coop"] },
 };
 export const isActive = (g: string) => (GAME_META as Record<string, { status: GameStatus }>)[g]?.status === "active";
 export const MODE_LABEL: Record<Mode, string> = { solo: "Solo", versus: "Competitive", coop: "Co-op" };
@@ -27,6 +28,7 @@ export function gameUrl(o: Opts & { room?: string | null }) {
 const WDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 /** "Competitive · hard · Week of Oct 12 · Tue" */
 export function optsLabel(o: Opts) {
+  if (o.game === "spywords") return o.mode === "coop" ? "Duo co-op" : "Classic · Red vs Blue";
   const wk = o.wk ? ` · 📅 Week of ${new Date(o.wk + "T12:00:00Z").toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" })}${o.day !== undefined ? " · " + WDAYS[o.day] : ""}` : "";
   return `${MODE_LABEL[o.mode]}${o.d ? ` · ${o.d}` : ""}${o.len ? ` · ${o.len} min` : ""}${wk}`;
 }

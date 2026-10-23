@@ -11,6 +11,7 @@
     "test": "vitest run",
     "weekly": "node scripts/weekly.mjs",
     "smoke": "node --env-file=.env.local scripts/smokeMultiplayer.mjs",
+    "smoke:spywords": "node --env-file=.env.local scripts/smokeSpyWords.mjs",
     "crossword:generate": "python3 scripts/crossword/repo_generate.py",
     "connections:audit": "node scripts/connectionsAudit.mjs",
     "connections:validate": "node scripts/validateConnections.mjs",

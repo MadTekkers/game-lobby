@@ -6,6 +6,8 @@ import WordlePage from "./games/Wordle";
 import ConnectionsPage from "./games/Connections";
 import CrosswordPage from "./games/Crossword";
 import BeePage from "./games/Bee";
+import SpyWordsPage from "./games/spywords/SpyWords";
+import SpySetup from "./games/spywords/SpySetup";
 import History from "./History";
 import Archive from "./Archive";
 import Setup from "./Setup";
@@ -13,13 +15,14 @@ import Lobby, { Avatar } from "./Lobby";
 import { gameUrl, GAME_META, optsLabel, findByCode, isActive, useOpenLobbies, useSitePresence, type GameId } from "./lib/lobby";
 import { getStreak, knownPeers, recentRooms } from "./lib/fx";
 
-const GAMES: { id: GameId; desc: string; color: string; icon: string }[] = [
+const GAMES: { id: GameId; desc: string; color: string; icon: string; team?: boolean }[] = [
   { id: "wordle", desc: "Guess the hidden word in 6 tries.", color: "#6aaa64", icon: "🟩" },
   { id: "connections", desc: "Group words that share a common thread.", color: "#ba81c5", icon: "🧩" },
   { id: "strands", desc: "Find hidden words and uncover the theme.", color: "#aedfee", icon: "🔤" },
   { id: "crossword", desc: "A full crossword — 5, 10 or 30 minutes.", color: "#b0c4ef", icon: "✏️" },
   { id: "mini", desc: "A 5×5 crossword in a minute or two.", color: "#95befa", icon: "⬛" },
   { id: "bee", desc: "How many words can you make with 7 letters?", color: "#f7da21", icon: "🐝" },
+  { id: "spywords", desc: "Team word spies: one-word clues, find your agents, dodge the assassin. 2–12 players.", color: "#e0614f", icon: "🕵️", team: true },
 ];
 const ago = (t: string | number) => { const m = Math.round((Date.now() - new Date(t).getTime()) / 60000); return m < 1 ? "just now" : m < 60 ? `${m}m ago` : `${Math.round(m / 60)}h ago`; };
 
@@ -41,7 +44,7 @@ function Home() {
           <div key={g.id} className="card" style={{ animationDelay: `${i * 60}ms` }}>
             <div className="card-top" style={{ background: g.color }}><span className="icon">{g.icon}</span>{st > 0 && <span className="streak">🔥 {st}</span>}</div>
             <div className="card-body"><h3>{GAME_META[g.id].name}</h3><p>{g.desc}</p>
-              <div className="card-actions"><button className="play" onClick={() => go(`/${g.id}?mode=solo`)}>Play</button><button className="play ghost" onClick={() => go(`/play/${g.id}`)}>Options & friends</button></div></div>
+              <div className="card-actions">{g.team ? <button className="play" onClick={() => go(`/play/${g.id}`)}>Create a room</button> : <><button className="play" onClick={() => go(`/${g.id}?mode=solo`)}>Play</button><button className="play ghost" onClick={() => go(`/play/${g.id}`)}>Options & friends</button></>}</div></div>
           </div>); })}
       </div>
       <div className="lobby-cols">
@@ -73,6 +76,8 @@ export default function App() {
   const page = (() => {
     const top = path.startsWith("/play/") ? path.slice(6) : path.slice(1);
     if ((GAME_META as Record<string, unknown>)[top] && !isActive(top) && !params.get("room")) { setTimeout(() => go("/"), 0); return <Home />; }
+    if (path === "/play/spywords") return <SpySetup key={k} />;
+    if (path === "/spywords") return <SpyWordsPage key={k} params={params} />;
     if (path.startsWith("/play/")) { const g = path.slice(6) as GameId; if (GAME_META[g]) return <Setup key={k} game={g} />; }
     if (path === "/lobby" && params.get("room")) return <Lobby key={k} room={params.get("room")!} />;
     if (path === "/strands") return <StrandsPage key={k} params={params} />;
