@@ -35,7 +35,7 @@ export function TrickTable({ n, me, seats, trick, trickSeats, actor, deadline, t
 }
 
 /** Your hand, overlapping to fit the width (13–17 cards at 320px). Legal cards lift; others dim on your turn. */
-export function HandFan({ cards, legal, onPick, disabled, hinted }: { cards: Card[]; legal?: Card[] | null; onPick?: (c: Card) => void; disabled?: boolean; hinted?: Card | null }) {
+export function HandFan({ cards, legal, onPick, disabled, hinted, selected, marked }: { cards: Card[]; legal?: Card[] | null; onPick?: (c: Card) => void; disabled?: boolean; hinted?: Card | Card[] | null; selected?: Card[]; marked?: Card[] }) {
   const [w, setW] = useState(() => Math.min(window.innerWidth, 560));
   useEffect(() => { const f = () => setW(Math.min(window.innerWidth, 560)); window.addEventListener("resize", f); return () => window.removeEventListener("resize", f); }, []);
   const cw = w < 400 ? 44 : 50; const avail = w - 28;
@@ -43,7 +43,7 @@ export function HandFan({ cards, legal, onPick, disabled, hinted }: { cards: Car
   return (
     <div className="fan" style={{ ["--step" as string]: `${step - cw}px` }}>
       {cards.map((c, i) => { const ok = !legal || legal.includes(c);
-        return <button key={c} className={`fan-c ${legal ? (ok ? "ok" : "no") : ""} ${hinted === c ? "hinted" : ""}`} disabled={disabled || !ok || !onPick} onClick={() => onPick?.(c)} aria-label={cardName(c)}><PlayingCard card={c} i={i} /></button>; })}
+        return <button key={c} className={`fan-c ${legal ? (ok ? "ok" : "no") : ""} ${hinted === c || (Array.isArray(hinted) && hinted.includes(c)) ? "hinted" : ""} ${selected?.includes(c) ? "sel" : ""} ${marked?.includes(c) ? "recv" : ""}`} disabled={disabled || !ok || !onPick} onClick={() => onPick?.(c)} aria-label={cardName(c)}><PlayingCard card={c} i={i} /></button>; })}
     </div>
   );
 }

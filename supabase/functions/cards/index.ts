@@ -10,6 +10,8 @@ import { cryptoRng, IllegalMove } from "./lib/core.ts";
 import * as BJ from "./lib/blackjack/engine.ts";
 import * as SP from "./lib/spades/engine.ts";
 import { spadesTuner } from "./lib/spades/tune.ts";
+import * as HT from "./lib/hearts/engine.ts";
+import { heartsTuner } from "./lib/hearts/tune.ts";
 import { tuneLevel, type GameTuner } from "./lib/tune.ts";
 import type { Ctx, Ledger, ParamSet } from "./lib/seats.ts";
 
@@ -32,8 +34,9 @@ type Engine = {
 const ENGINES: Record<string, Engine> = {
   blackjack: { ...(BJ as unknown as Engine), seats: { min: 2, max: 4 }, generic: false },
   spades: { ...(SP as unknown as Engine), seats: SP.SEATS, generic: true },
+  hearts: { ...(HT as unknown as Engine), seats: HT.SEATS, generic: true },
 };
-const TUNERS: GameTuner[] = [spadesTuner as unknown as GameTuner];
+const TUNERS: GameTuner[] = [spadesTuner as unknown as GameTuner, heartsTuner as unknown as GameTuner];
 
 // Tuned bot params, cached per warm instance for a minute.
 const paramCache = new Map<string, { at: number; p: ParamSet }>();

@@ -143,3 +143,7 @@
 .tt-me { margin-top: 6px; border-top: 1px dashed rgba(255,255,255,.25); padding-top: 6px; } .tt-me .tt-who { justify-content: center; } .tt-me .stack { color: #f9df6d; }
 .tut-next { display: flex; align-items: center; gap: 6px; justify-content: center; margin-top: 4px; color: #f9df6d; }
 @media (max-width: 400px) { .tutor-row { flex-direction: column; gap: 2px; } }
+.fan-c.sel { transform: translateY(-20px) !important; } .fan-c.sel .pc-face { box-shadow: 0 0 0 3px #4a8fe7; }
+.fan-c.recv .pc-face { outline: 2px dashed #6aaa64; outline-offset: -3px; }
+.hrt-pass { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.hrt-pts { color: #c0392b; font-weight: 700; }

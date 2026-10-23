@@ -10,6 +10,7 @@ import SpyWordsPage from "./games/spywords/SpyWords";
 import SpySetup from "./games/spywords/SpySetup";
 import BlackjackPage from "./cards/blackjack/Blackjack";
 import SpadesPage from "./cards/spades/Spades";
+import HeartsPage from "./cards/hearts/Hearts";
 import CardSetup from "./cards/CardSetup";
 import History from "./History";
 import Archive from "./Archive";
@@ -28,6 +29,7 @@ const GAMES: { id: GameId; desc: string; color: string; icon: string; team?: boo
   { id: "spywords", desc: "Team word spies: one-word clues, find your agents, dodge the assassin. 2–12 players.", color: "#e0614f", icon: "🕵️", team: true },
   { id: "blackjack", desc: "Beat the dealer to 21 — solo vs bots or a live table, with a coach.", color: "#2f8a57", icon: "🂡" },
   { id: "spades", desc: "Bid your tricks, trump with spades, dodge the bags. Partners, cutthroat or two-hand, with a coach.", color: "#2b3a55", icon: "♠️" },
+  { id: "hearts", desc: "Pass three, duck the Q♠, or shoot the moon. Four, three or two players, with a coach.", color: "#a8323e", icon: "♥️" },
 ];
 const ago = (t: string | number) => { const m = Math.round((Date.now() - new Date(t).getTime()) / 60000); return m < 1 ? "just now" : m < 60 ? `${m}m ago` : `${Math.round(m / 60)}h ago`; };
 
@@ -93,6 +95,7 @@ export default function App() {
     if (path === "/bee") return <BeePage key={k} params={params} />;
     if (path === "/blackjack") return <BlackjackPage key={k} params={params} />;
     if (path === "/spades") return <SpadesPage key={k} params={params} />;
+    if (path === "/hearts") return <HeartsPage key={k} params={params} />;
     if (path === "/archive") return <Archive key={k} />;
     if (path === "/history") return <History key={k} params={params} />;
     return <Home />;

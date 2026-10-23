@@ -3,7 +3,7 @@ import { supabase } from "./supabase";
 import { getPlayer, newRoomId } from "./player";
 
 export type Mode = "solo" | "versus" | "coop" | "live";
-export type GameId = "strands" | "wordle" | "connections" | "crossword" | "mini" | "bee" | "spywords" | "blackjack" | "spades";
+export type GameId = "strands" | "wordle" | "connections" | "crossword" | "mini" | "bee" | "spywords" | "blackjack" | "spades" | "hearts";
 export type Opts = { game: GameId; mode: Mode; d?: string; len?: string; p?: number; cw?: number; wk?: string; day?: number; seats?: number; bot?: string; train?: number; tut?: number };
 export type GameStatus = "active" | "archived";
 /** status "archived" hides a game from the lobby, pickers, archive and history (code/routes/data kept). Restore = set back to "active". */
@@ -17,6 +17,7 @@ export const GAME_META: Record<GameId, { name: string; status: GameStatus; modes
   spywords: { name: "Spy Words", status: "active", modes: ["versus", "coop"] },
   blackjack: { name: "Blackjack", status: "active", modes: ["solo", "live"], cards: true },
   spades: { name: "Spades", status: "active", modes: ["solo", "live"], cards: true },
+  hearts: { name: "Hearts", status: "active", modes: ["solo", "live"], cards: true },
 };
 export const isActive = (g: string) => (GAME_META as Record<string, { status: GameStatus }>)[g]?.status === "active";
 export const MODE_LABEL: Record<Mode, string> = { solo: "Solo", versus: "Competitive", coop: "Co-op", live: "Live table" };

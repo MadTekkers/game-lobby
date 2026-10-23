@@ -16,6 +16,11 @@ const CFG: Record<string, Cfg> = {
     bots: { easy: "Rough bids, plays on instinct", medium: "Counts cards, avoids bags", hard: "Simulates the hidden hands" },
     train: "after every bid and card, compare your move with 1–3 alternatives (make / set % and bags from a few hundred simulated deals each).",
     tutorial: "All four hands face-up, with beginner → expert tips and Monte Carlo odds at every bid and card." },
+  hearts: { seats: [2, 3, 4], def: 4, seatLabel: (n) => (n === 4 ? "classic" : n === 3 ? "2♦ out" : "stock"),
+    seatNote: "4 = classic, pass left/right/across/hold · 3 = 17 cards each (2♦ removed) · 2 = 13 each plus a stock you draw from after each trick. Game ends at 100; lowest wins.",
+    bots: { easy: "Passes its highest cards, plays loosely", medium: "Ducks, counts cards, flushes the queen", hard: "Simulates the hidden hands" },
+    train: "after every pass and card, compare your move with 1–3 alternatives (chance of eating Q♠, expected points and moon odds from a few hundred simulated deals).",
+    tutorial: "Every hand face-up, with beginner → expert tips and Monte Carlo odds at every pass and card." },
 };
 
 /** Setup screen for the card games: solo vs bots or a live table, seat count, bot level, train mode. */
