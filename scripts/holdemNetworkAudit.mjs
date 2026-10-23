@@ -75,8 +75,11 @@ for (const X of [A, Bo]) {
     // no public object (minus previous-hand summary) contains the other's current hole; and whole body only if a showdown explains it
     for (const pb of r.out) { const h = oPriv.get(pb.handNo); if (!h) continue; const t = strip(pb);
       for (const card of h) if (t.includes(`"${card}"`) && !(pb.board ?? []).includes(card)) { report.violations.push(`${X.name} got ${oName}'s hole ${card} (hand ${pb.handNo}, ${pb.phase})`); break; } }
-    for (const [hn, h] of oPriv) { if (allowed.has(hn)) continue; const inBody = h.filter((card) => c.body.includes(`"${card}"`));
-      if (inBody.length === 2 && r.out.some((pb) => pb.handNo === hn && pb.phase === "betting")) report.violations.push(`${X.name}: both of ${oName}'s hole cards in a frame during hand ${hn}`); }
+    // whole frame (any field, any nesting — minus the previous hand's public summary/log, which reuse card names from another deal)
+    const bodyNow = JSON.stringify(r.j, (k, v) => (k === "lastHand" || k === "log" || k === "results" ? undefined : v));
+    for (const [hn, h] of oPriv) { if (allowed.has(hn)) continue; const cur = r.out.find((pb) => pb.handNo === hn && pb.phase === "betting"); if (!cur) continue;
+      const inBody = h.filter((card) => bodyNow.includes(`"${card}"`) && !(cur.board ?? []).includes(card));
+      if (inBody.length === 2) { report.violations.push(`${X.name}: both of ${oName}'s hole cards in a frame during hand ${hn}`); (report.evidence ??= []).push({ hn, h, kind: c.kind, body: c.body.slice(0, 4000) }); } }
   }
 }
 report.handsChecked = { Alice: [...priv.Alice.keys()], Bob: [...priv.Bob.keys()] }; report.seats = seatOf;
