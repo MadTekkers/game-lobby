@@ -8,7 +8,7 @@ import { SIZE_TO_LEN } from "./lib/crosswordRepo";
 import { DAYS, WEEKLY_BASE, findWeekly, thisWeek, todayDay, useWeeks, weekLabel, weeklyDiff } from "./lib/weekly";
 import { parseHash } from "./lib/router";
 
-const MODE_DESC: Record<Mode, string> = { solo: "Just you, at your own pace.", versus: "Same puzzle, private boards — race everyone live.", coop: "One shared board — solve it together." };
+const MODE_DESC: Record<Mode, string> = { solo: "Just you, at your own pace.", versus: "Same puzzle, private boards — race everyone live.", coop: "One shared board — solve it together.", live: "Real people at one table." };
 const LEN_DESC: Record<string, string> = { "5": "5 min · 7×7", "10": "10 min · 11×11", "30": "30 min · 15×15" };
 
 export default function Setup({ game }: { game: GameId }) {

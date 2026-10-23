@@ -8,6 +8,8 @@ import CrosswordPage from "./games/Crossword";
 import BeePage from "./games/Bee";
 import SpyWordsPage from "./games/spywords/SpyWords";
 import SpySetup from "./games/spywords/SpySetup";
+import BlackjackPage from "./cards/blackjack/Blackjack";
+import CardSetup from "./cards/CardSetup";
 import History from "./History";
 import Archive from "./Archive";
 import Setup from "./Setup";
@@ -23,6 +25,7 @@ const GAMES: { id: GameId; desc: string; color: string; icon: string; team?: boo
   { id: "mini", desc: "A 5×5 crossword in a minute or two.", color: "#95befa", icon: "⬛" },
   { id: "bee", desc: "How many words can you make with 7 letters?", color: "#f7da21", icon: "🐝" },
   { id: "spywords", desc: "Team word spies: one-word clues, find your agents, dodge the assassin. 2–12 players.", color: "#e0614f", icon: "🕵️", team: true },
+  { id: "blackjack", desc: "Beat the dealer to 21 — solo vs bots or a live table, with a coach.", color: "#2f8a57", icon: "🂡" },
 ];
 const ago = (t: string | number) => { const m = Math.round((Date.now() - new Date(t).getTime()) / 60000); return m < 1 ? "just now" : m < 60 ? `${m}m ago` : `${Math.round(m / 60)}h ago`; };
 
@@ -78,7 +81,7 @@ export default function App() {
     if ((GAME_META as Record<string, unknown>)[top] && !isActive(top) && !params.get("room")) { setTimeout(() => go("/"), 0); return <Home />; }
     if (path === "/play/spywords") return <SpySetup key={k} />;
     if (path === "/spywords") return <SpyWordsPage key={k} params={params} />;
-    if (path.startsWith("/play/")) { const g = path.slice(6) as GameId; if (GAME_META[g]) return <Setup key={k} game={g} />; }
+    if (path.startsWith("/play/")) { const g = path.slice(6) as GameId; if (GAME_META[g]?.cards) return <CardSetup key={k} game={g} />; if (GAME_META[g]) return <Setup key={k} game={g} />; }
     if (path === "/lobby" && params.get("room")) return <Lobby key={k} room={params.get("room")!} />;
     if (path === "/strands") return <StrandsPage key={k} params={params} />;
     if (path === "/wordle") return <WordlePage key={k} params={params} />;
@@ -86,6 +89,7 @@ export default function App() {
     if (path === "/crossword") return <CrosswordPage key={k} params={params} />;
     if (path === "/mini") return <CrosswordPage key={k} params={params} mini />;
     if (path === "/bee") return <BeePage key={k} params={params} />;
+    if (path === "/blackjack") return <BlackjackPage key={k} params={params} />;
     if (path === "/archive") return <Archive key={k} />;
     if (path === "/history") return <History key={k} params={params} />;
     return <Home />;

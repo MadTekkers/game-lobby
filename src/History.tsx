@@ -4,9 +4,11 @@ import { go } from "./lib/router";
 import { fmtTime } from "./lib/daily";
 import { getPlayer } from "./lib/player";
 import { isActive } from "./lib/lobby";
+import { ChipsBoard } from "./cards/ChipsBoard";
 
 type Row = { player: string; game: string; puzzle_id: number; won: boolean; mistakes: number; hints: number; seconds: number; created_at: string; room_id: string | null; detail?: any };
-const NAMES: Record<string, string> = { strands: "Mini Strands", wordle: "Wordle", connections: "Connections", crossword: "Crossword", mini: "The Mini", bee: "Spelling Bee", spywords: "Spy Words" };
+const NAMES: Record<string, string> = { strands: "Mini Strands", wordle: "Wordle", connections: "Connections", crossword: "Crossword", mini: "The Mini", bee: "Spelling Bee", spywords: "Spy Words", blackjack: "Blackjack" };
+const CARD_GAMES = ["blackjack"];
 const spyLabel = (r: Row) => { const d = r.detail || {}; const w = d.mode === "duet" ? (d.winner === "team" ? "Agents won" : "Agents lost") : `${d.winner === "red" ? "Red" : "Blue"} won`; return `${d.mode === "duet" ? "Duo" : "Classic"} · ${w} · ${d.turns ?? r.hints} turns${d.role ? ` · ${d.team ? d.team + " " : ""}${d.role}` : ""}`; };
 
 export default function History({ params }: { params: URLSearchParams }) {
@@ -22,13 +24,14 @@ export default function History({ params }: { params: URLSearchParams }) {
 
   const games = ["strands", "wordle", "connections", "crossword", "mini", "bee"].filter(isActive);
   const board = (g: string) => (rows || []).filter((r) => r.game === g && r.won).sort((a, b) => a.seconds - b.seconds || a.mistakes - b.mistakes).slice(0, 10);
-  const perPlayer = Object.values((rows || []).reduce((m: Record<string, { player: string; played: number; wins: number; total: number }>, r) => {
+  const perPlayer = Object.values((rows || []).filter((r) => !CARD_GAMES.includes(r.game)).reduce((m: Record<string, { player: string; played: number; wins: number; total: number }>, r) => {
     const x = (m[r.player] ||= { player: r.player, played: 0, wins: 0, total: 0 }); x.played++; if (r.won) { x.wins++; x.total += r.seconds; } return m; }, {}));
 
   return (
     <div className="page">
       <header className="game-header"><button className="back" onClick={() => go("/")}>‹ Games</button><h1>{room ? "Session history" : "History & leaderboard"}</h1>
         <div className="room-bar">{room ? <span className="muted">Session {room}</span> : <label className="muted"><input type="checkbox" checked={mine} onChange={(e) => setMine(e.target.checked)} /> Only me ({getPlayer() || "no name set"})</label>}</div></header>
+      {!room && <ChipsBoard />}
       {!rows ? <p className="center muted">Loading…</p> : rows.length === 0 ? <p className="center muted">No games recorded yet.</p> : (<>
         <h2 className="section">Players</h2>
         <table className="tbl"><thead><tr><th>Player</th><th>Played</th><th>Wins</th><th>Avg win time</th></tr></thead>
@@ -39,7 +42,7 @@ export default function History({ params }: { params: URLSearchParams }) {
               {board(g).length === 0 && <tr><td className="muted">No wins yet</td></tr>}</tbody></table></div>))}</div>
         <h2 className="section">All games</h2>
         <table className="tbl"><thead><tr><th>When</th><th>Player</th><th>Game</th><th>Result</th><th>Time</th></tr></thead>
-          <tbody>{rows.map((r, i) => <tr key={i}><td className="muted">{new Date(r.created_at).toLocaleString()}</td><td>{r.player}</td><td>{r.game === "spywords" ? <>{NAMES[r.game]} <span className="muted small">{spyLabel(r)}</span></> : <>{NAMES[r.game]} #{r.puzzle_id + 1}</>}</td><td>{r.won ? "✅ Won" : "❌ Lost"}</td><td>{fmtTime(r.seconds)}</td></tr>)}</tbody></table>
+          <tbody>{rows.map((r, i) => <tr key={i}><td className="muted">{new Date(r.created_at).toLocaleString()}</td><td>{r.player}</td><td>{r.game === "spywords" ? <>{NAMES[r.game]} <span className="muted small">{spyLabel(r)}</span></> : CARD_GAMES.includes(r.game) ? <>{NAMES[r.game]} <span className="muted small">hand {r.puzzle_id}</span></> : <>{NAMES[r.game]} #{r.puzzle_id + 1}</>}</td><td>{CARD_GAMES.includes(r.game) && r.detail?.net !== undefined ? (r.detail.net > 0 ? `✅ +${r.detail.net}` : r.detail.net < 0 ? `❌ ${r.detail.net}` : "➖ push") : r.won ? "✅ Won" : "❌ Lost"}</td><td>{fmtTime(r.seconds)}</td></tr>)}</tbody></table>
       </>)}
     </div>
   );
