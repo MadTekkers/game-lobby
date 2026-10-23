@@ -1,5 +1,5 @@
 // Small UI effects: player colors/avatars, WebAudio sounds (toggleable), confetti, streaks.
-export const PLAYER_COLORS = ["#4f85e5", "#e05c5c", "#3fae5a", "#b25fc9", "#f29b30", "#1aa3a3", "#d6589a", "#7a6ad8"];
+export const PLAYER_COLORS = ["#2f62c0", "#c0392b", "#2e7d32", "#8e3fa8", "#a85500", "#0f7c7c", "#b03a78", "#5a4ab8"] // all ≥ 4.5:1 with white initials (WCAG AA);
 export function playerColor(name: string) { let h = 0; for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0; return PLAYER_COLORS[h % PLAYER_COLORS.length]; }
 export function initials(n: string) {
   const parts = n.trim().split(/[\s_.-]+/).filter(Boolean);
