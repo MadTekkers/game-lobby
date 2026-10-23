@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
 import { go } from "./lib/router";
-import { GAME_META, type GameId } from "./lib/lobby";
+import { GAME_META, isActive, type GameId } from "./lib/lobby";
 import { DAYS, WEEKLY_BASE, thisWeek, todayDay, useWeeks, weekLabel, weekRows } from "./lib/weekly";
 import { getPlayed } from "./lib/refresh";
 
 const COLS: { game: GameId; d: string; label: string }[] = [
   { game: "wordle", d: "", label: "Wordle" },
-  { game: "connections", d: "easy", label: "Connections · easy" },
   { game: "connections", d: "medium", label: "Connections · medium" },
   { game: "connections", d: "hard", label: "Connections · hard" },
   { game: "strands", d: "", label: "Mini Strands" },
@@ -24,10 +23,10 @@ function Week({ wk }: { wk: string }) {
   return (
     <div className="archive-wrap"><table className="archive">
       <thead><tr><th />{DAYS.map((d, i) => <th key={d} className={isCur && i === todayDay() ? "today" : ""}>{d}</th>)}</tr></thead>
-      <tbody>{COLS.map((c) => (
+      <tbody>{COLS.filter((c) => isActive(c.game)).map((c) => (
         <tr key={c.label}><th>{c.label}</th>{DAYS.map((_, i) => {
           const r = rows.find((x) => x.game === c.game && x.difficulty === (c.game === "connections" ? c.d : "") && x.day === i);
-          if (!r) return <td key={i} className="muted">—</td>;
+          if (!r || (c.game === "mini" && i < 2)) return <td key={i} className="muted">—</td>;
           const p = WEEKLY_BASE + r.id; const future = isCur && i > todayDay();
           const played = poolKeys(c.game, c.d).some((k) => !!getPlayed(k)[p]);
           const q = `p=${p}&wk=${wk}&day=${i}${c.d ? `&d=${c.d}` : ""}`;

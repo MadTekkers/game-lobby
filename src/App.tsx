@@ -10,7 +10,7 @@ import History from "./History";
 import Archive from "./Archive";
 import Setup from "./Setup";
 import Lobby, { Avatar } from "./Lobby";
-import { gameUrl, GAME_META, optsLabel, findByCode, useOpenLobbies, useSitePresence, type GameId } from "./lib/lobby";
+import { gameUrl, GAME_META, optsLabel, findByCode, isActive, useOpenLobbies, useSitePresence, type GameId } from "./lib/lobby";
 import { getStreak, knownPeers, recentRooms } from "./lib/fx";
 
 const GAMES: { id: GameId; desc: string; color: string; icon: string }[] = [
@@ -37,7 +37,7 @@ function Home() {
       <div className="name-row"><label>Your name <input value={name} maxLength={40} placeholder="shown to other players" onChange={(e) => { setName(e.target.value); setPlayer(e.target.value); }} /></label>
         <button className="pill ghost" onClick={() => go("/history")}>🏆 History & leaderboard</button><button className="pill ghost" onClick={() => go("/archive")}>📅 Puzzle archive</button></div>
       <div className="cards">
-        {GAMES.map((g, i) => { const st = getStreak(g.id); return (
+        {GAMES.filter((g) => isActive(g.id)).map((g, i) => { const st = getStreak(g.id); return (
           <div key={g.id} className="card" style={{ animationDelay: `${i * 60}ms` }}>
             <div className="card-top" style={{ background: g.color }}><span className="icon">{g.icon}</span>{st > 0 && <span className="streak">🔥 {st}</span>}</div>
             <div className="card-body"><h3>{GAME_META[g.id].name}</h3><p>{g.desc}</p>
@@ -47,8 +47,8 @@ function Home() {
       <div className="lobby-cols">
         <section className="panel">
           <h2 className="section">Open lobbies <span className="live-dot" /></h2>
-          {lobbies.length === 0 ? <p className="muted small">No open lobbies right now — create one from any game's “Options & friends”.</p> :
-            lobbies.map((l) => (
+          {lobbies.filter((l) => isActive(l.game)).length === 0 ? <p className="muted small">No open lobbies right now — create one from any game's “Options & friends”.</p> :
+            lobbies.filter((l) => isActive(l.game)).map((l) => (
               <div key={l.id} className="lobby-row pop-in"><Avatar name={l.host || "?"} size={30} />
                 <div className="grow"><b>{l.name || `${l.host}'s lobby`}</b><div className="muted small">{GAME_META[l.game]?.name} · {optsLabel(l.params)} · {ago(l.created_at)}</div></div>
                 <button className="pill" onClick={() => go(`/lobby?room=${l.id}`)}>Join</button></div>))}
@@ -71,6 +71,8 @@ export default function App() {
   const { path, params } = useRoute();
   const k = path + params.toString();
   const page = (() => {
+    const top = path.startsWith("/play/") ? path.slice(6) : path.slice(1);
+    if ((GAME_META as Record<string, unknown>)[top] && !isActive(top) && !params.get("room")) { setTimeout(() => go("/"), 0); return <Home />; }
     if (path.startsWith("/play/")) { const g = path.slice(6) as GameId; if (GAME_META[g]) return <Setup key={k} game={g} />; }
     if (path === "/lobby" && params.get("room")) return <Lobby key={k} room={params.get("room")!} />;
     if (path === "/strands") return <StrandsPage key={k} params={params} />;

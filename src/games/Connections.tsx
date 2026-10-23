@@ -25,7 +25,8 @@ const MAX_MISTAKES = 4;
 const COLORS = ["#f9df6d", "#a0c35a", "#b0c4ef", "#ba81c5"]; // NYT yellow, green, blue, purple
 
 export default function ConnectionsPage({ params }: { params: URLSearchParams }) {
-  const d = LISTS[params.get("d") || "easy"] ? params.get("d") || "easy" : "easy";
+  // "easy" is no longer offered (puzzles kept); old easy links/rooms fall back to medium.
+  const d = ["medium", "hard"].includes(params.get("d") || "") ? params.get("d")! : "medium";
   const { idx, item } = usePuzzle<Puzzle>(LISTS[d], params, 0);
   if (idx === null || !item) return <p className="center muted">Loading puzzle…</p>;
   return <Connections key={d + idx} idx={idx} d={d} puzzle={item} room={params.get("room")} />;

@@ -17,7 +17,7 @@ export default function CrosswordPage({ params, mini }: { params: URLSearchParam
 }
 
 function MiniPage({ params }: { params: URLSearchParams }) {
-  const d = ["easy", "medium", "hard"].includes(params.get("d") || "") ? params.get("d")! : "easy";
+  const d = ["medium", "hard"].includes(params.get("d") || "") ? params.get("d")! : "medium"; // easy retired → medium
   const listKey = `mini-${d}`; const list = CROSSWORDS[listKey] || [];
   const { idx, item } = usePuzzle<CW>(list.length ? list : [null as unknown as CW], params);
   if (!list.length) return <p className="center muted">No puzzles for this setting yet.</p>;

@@ -4,7 +4,7 @@ Live: https://game-lobby-games.vercel.app
 
 NYT-Games-style daily word games built with Vite + React + TypeScript, with real-time multiplayer on Supabase.
 
-Games: **Wordle**, **Connections** (easy / medium / hard), **Mini Strands**, **Crossword** (5/10/30 min ≈ 7×7/11×11/15×15, easy/medium/hard), **The Mini** (5×5), **Spelling Bee**.
+Games: **Wordle**, **Connections** (easy / medium / hard), **Mini Strands**, **Crossword** (5/10/30 min ≈ 7×7/11×11/15×15, easy/medium/hard), **The Mini** (5×5). *(Archived — hidden but intact: **Crossword** (big), **Spelling Bee**.)*
 
 - **Modes**: Solo, Competitive (same puzzle, private boards, live leaderboard of all players), Co-op (one shared board, colored live cursors/drag paths). Connections co-op has per-tile locks and a compare-and-swap submit lock.
 - **Lobbies**: create a lobby (game, mode, difficulty, length, name, optional private 4-letter code); it appears live in "Open lobbies" for everyone on the site; host presses Start. Share links still work (good for group chats). Site-wide presence shows who's online, ★ marks people you've played with, and "Rejoin" lists your recent rooms.
@@ -67,3 +67,8 @@ Rules enforced by `scripts/weekly/connectionsGen2.mjs` + `connectionsWeek.mjs`:
 Tools: `npm run connections:audit` (type mix per source), `npm run connections:validate` (checks every weekly puzzle in Supabase),
 `npm run connections:regen -- --weeks 2026-10-19 --diffs medium,hard` (in-place regeneration; never touches puzzles with a recorded result or room),
 `npm run connections:classic` (rebuilds the bundled classic medium/hard lists).
+
+### Archived games
+Each game in `GAME_META` (`src/lib/lobby.ts`) has `status: "active" | "archived"`. Archived games are hidden from the home cards, open-lobby list, archive week table and history tabs; direct visits to their routes redirect to the lobby (existing room links still work). Code, routes, data, DB tables and puzzles are untouched.
+Currently archived: `crossword` (big crossword), `bee` (Spelling Bee).
+**To restore:** change that game's `status: "archived"` to `status: "active"` in `src/lib/lobby.ts` and push to main.

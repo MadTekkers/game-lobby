@@ -14,7 +14,7 @@ const LEN_DESC: Record<string, string> = { "5": "5 min · 7×7", "10": "10 min �
 export default function Setup({ game }: { game: GameId }) {
   const meta = GAME_META[game];
   const [mode, setMode] = useState<Mode>(meta.modes[0]);
-  const [d, setD] = useState(parseHash().params.get("d") || "medium");
+  const [d, setD] = useState(["medium", "hard"].includes(parseHash().params.get("d") || "") ? parseHash().params.get("d")! : "medium");
   const [len, setLen] = useState("10");
   const [name, setName] = useState("");
   const [priv, setPriv] = useState(false);
@@ -25,7 +25,7 @@ export default function Setup({ game }: { game: GameId }) {
   const weeks = useWeeks(); const cur = thisWeek();
   const [src, setSrc] = useState<"week" | "past" | "classic">(pre.get("wk") && pre.get("wk") !== cur ? "past" : "week");
   const [pastWk, setPastWk] = useState(pre.get("wk") && pre.get("wk") !== cur ? pre.get("wk")! : "");
-  const [day, setDay] = useState(pre.get("day") ? Number(pre.get("day")) : todayDay());
+  const [day, setDay] = useState(() => { const v = pre.get("day") ? Number(pre.get("day")) : todayDay(); return game === "mini" && v < 2 ? 2 : v; }); // Mon/Tue weekly minis are easy (retired)
   const past = (weeks || []).filter((w) => w !== cur);
   const wk = isCw || src === "classic" ? null : src === "week" ? cur : pastWk || past[0] || null;
   const [err, setErr] = useState("");
@@ -67,12 +67,12 @@ export default function Setup({ game }: { game: GameId }) {
           <button className={src === "classic" ? "on" : ""} onClick={() => setSrc("classic")}>Classic (random)</button>
         </div>
         {src === "past" && <div className="name-row"><label>Week <select value={pastWk || past[0] || ""} onChange={(e) => setPastWk(e.target.value)}>{past.map((w) => <option key={w} value={w}>{weekLabel(w)}</option>)}</select></label></div>}
-        {src !== "classic" && <div className="seg days">{DAYS.map((x, i) => <button key={x} className={day === i ? "on" : ""} disabled={src === "week" && i > todayDay()} onClick={() => setDay(i)}>{x}</button>)}</div>}
+        {src !== "classic" && <div className="seg days">{DAYS.map((x, i) => <button key={x} className={day === i ? "on" : ""} disabled={(src === "week" && i > todayDay()) || (game === "mini" && i < 2)} onClick={() => setDay(i)}>{x}</button>)}</div>}
         {wk && <p className="muted small">{weekLabel(wk)} · {DAYS[day]}{game === "mini" ? ` · ${["easy", "easy", "medium", "medium", "medium", "hard", "hard"][day]} (set by day)` : ""} — <a href="#/archive">browse the archive</a></p>}
         {err && <p className="warn">{err}</p>}</>)}
       {meta.difficulty && !isCw && !(game === "mini" && wk) && (<><h2 className="section">Difficulty</h2>
-        <div className="seg">{["easy", "medium", "hard"].map((x) => <button key={x} className={d === x ? "on" : ""} onClick={() => setD(x)}>{x[0].toUpperCase() + x.slice(1)}</button>)}</div>
-        {game === "connections" && <p className="muted small">Easy: everyday categories · Medium: trivia & pop culture with traps · Hard: wordplay (hidden words, homophones, ___ + word, anagrams) and red herrings.</p>}</>)}
+        <div className="seg">{(isCw ? ["easy", "medium", "hard"] : ["medium", "hard"]).map((x) => <button key={x} className={d === x ? "on" : ""} onClick={() => setD(x)}>{x[0].toUpperCase() + x.slice(1)}</button>)}</div>
+        {game === "connections" && <p className="muted small">Medium: trivia & pop culture with traps · Hard: wordplay (hidden words, homophones, ___ + word, anagrams) and red herrings.</p>}</>)}
       {meta.length && !isCw && (<><h2 className="section">Length</h2>
         <div className="seg">{["5", "10", "30"].map((x) => <button key={x} className={len === x ? "on" : ""} onClick={() => setLen(x)}>{LEN_DESC[x]}</button>)}</div></>)}
       {mode !== "solo" && (<>

@@ -5,14 +5,17 @@ import { getPlayer, newRoomId } from "./player";
 export type Mode = "solo" | "versus" | "coop";
 export type GameId = "strands" | "wordle" | "connections" | "crossword" | "mini" | "bee";
 export type Opts = { game: GameId; mode: Mode; d?: string; len?: string; p?: number; cw?: number; wk?: string; day?: number };
-export const GAME_META: Record<GameId, { name: string; modes: Mode[]; difficulty?: boolean; length?: boolean }> = {
-  wordle: { name: "Wordle", modes: ["solo", "versus", "coop"] },
-  connections: { name: "Connections", modes: ["solo", "coop"], difficulty: true },
-  strands: { name: "Mini Strands", modes: ["solo", "versus", "coop"] },
-  crossword: { name: "Crossword", modes: ["solo", "versus", "coop"], difficulty: true, length: true },
-  mini: { name: "The Mini", modes: ["solo", "versus", "coop"], difficulty: true },
-  bee: { name: "Spelling Bee", modes: ["solo", "versus", "coop"] },
+export type GameStatus = "active" | "archived";
+/** status "archived" hides a game from the lobby, pickers, archive and history (code/routes/data kept). Restore = set back to "active". */
+export const GAME_META: Record<GameId, { name: string; status: GameStatus; modes: Mode[]; difficulty?: boolean; length?: boolean }> = {
+  wordle: { name: "Wordle", status: "active", modes: ["solo", "versus", "coop"] },
+  connections: { name: "Connections", status: "active", modes: ["solo", "coop"], difficulty: true },
+  strands: { name: "Mini Strands", status: "active", modes: ["solo", "versus", "coop"] },
+  crossword: { name: "Crossword", status: "archived", modes: ["solo", "versus", "coop"], difficulty: true, length: true },
+  mini: { name: "The Mini", status: "active", modes: ["solo", "versus", "coop"], difficulty: true },
+  bee: { name: "Spelling Bee", status: "archived", modes: ["solo", "versus", "coop"] },
 };
+export const isActive = (g: string) => (GAME_META as Record<string, { status: GameStatus }>)[g]?.status === "active";
 export const MODE_LABEL: Record<Mode, string> = { solo: "Solo", versus: "Competitive", coop: "Co-op" };
 
 export function gameUrl(o: Opts & { room?: string | null }) {
