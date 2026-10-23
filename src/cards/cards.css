@@ -96,3 +96,50 @@
 .card-setup .seg button { flex: 1 1 0; min-width: 0; padding: 6px 4px; border-radius: 12px; }
 .card-setup .seg button.on small { color: #ddd; }
 .card-setup .seg { display: flex; width: 100%; }
+/* trick-taking table (Spades, Hearts) */
+.trk { max-width: 560px; }
+.scorebar { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin: 0 0 8px; }
+.scorebar .team { border: 1px solid var(--line); border-radius: 10px; padding: 4px 8px; font-size: 12px; min-width: 0; text-align: center; background: #fff; }
+.scorebar .team b { font: 700 17px Georgia, serif; display: block; } .scorebar .team.mine { border-color: #4f85e5; background: #f1f6ff; }
+.scorebar .team .nm { display: block; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tt { position: relative; height: 300px; }
+.tt.n2 { height: 250px; }
+.tt-seat { position: absolute; width: 31%; max-width: 150px; background: rgba(0,0,0,.2); border-radius: 10px; padding: 5px; font-size: 12px; min-width: 0; transition: box-shadow .2s; }
+.tt-seat.turn { box-shadow: 0 0 0 2px #f9df6d; background: rgba(0,0,0,.3); }
+.tt-seat.n { left: 50%; top: 0; transform: translateX(-50%); } .tt-seat.w { left: 0; top: 70px; } .tt-seat.e { right: 0; top: 70px; }
+.tt.n3 .tt-seat.w, .tt.n3 .tt-seat.e { top: 0; }
+.tt-who { display: flex; align-items: center; gap: 4px; min-width: 0; } .tt-who .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.tt-line { color: #e9f5ee; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.tt-backs { display: flex; align-items: center; gap: 3px; color: #cfe8d8; margin-top: 2px; }
+.tt-back { width: 12px; height: 17px; border-radius: 2px; border: 1.5px solid #fff; background: repeating-linear-gradient(45deg, #4f85e5 0 2px, #3d6fc7 2px 4px); }
+.tt-open .pc.sm { width: 24px; height: 36px; } .tt-open .pc-row .pc.sm + .pc.sm { margin-left: -14px; } .tt-open .pc.sm .pc-s { display: none; } .tt-open .pc.sm .pc-r { font-size: 10px; left: 2px; }
+.tt-open { overflow: hidden; margin-top: 3px; }
+.tt-center { position: absolute; left: 50%; top: 58%; width: 130px; height: 130px; transform: translate(-50%, -50%); }
+.tt.n2 .tt-center { top: 62%; }
+.tt-play { position: absolute; left: 50%; top: 50%; animation: pop .25s both; }
+.tt-play.s { transform: translate(-50%, -10%); } .tt-play.n { transform: translate(-50%, -95%); } .tt-play.w { transform: translate(-110%, -52%); } .tt-play.e { transform: translate(10%, -52%); }
+.tt-msg { position: absolute; inset: auto -40px -34px; text-align: center; font-size: 12px; color: #f2fbf5; }
+.fan { display: flex; justify-content: center; padding: 14px 0 4px; }
+.fan-c { background: none; border: 0; padding: 0; transition: transform .15s; } .fan-c + .fan-c { margin-left: var(--step); }
+.fan-c.ok:not(:disabled) { transform: translateY(-8px); cursor: pointer; } .fan-c.ok:not(:disabled):hover { transform: translateY(-14px); }
+.fan-c.no { filter: brightness(.7); } .fan-c:disabled { cursor: default; }
+.fan-c.hinted .pc-face { box-shadow: 0 0 0 3px #f5d33f; }
+.bidpad { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; max-width: 360px; margin: 8px auto; }
+.bidpad button { padding: 8px 0; border-radius: 8px; border: 1px solid var(--line); background: #fff; font-weight: 700; font-size: 15px; }
+.bidpad button.nil { grid-column: span 2; } .bidpad button.on { background: #121212; color: #fff; }
+.bidpad button.hinted { box-shadow: 0 0 0 3px #f5d33f; }
+.tutor { border: 1px solid #c8d8f5; background: #f5f9ff; border-radius: 12px; padding: 8px 10px; margin: 10px 0; font-size: 13px; }
+.tutor-h { font-weight: 700; margin-bottom: 4px; } .tutor-row { display: flex; gap: 8px; align-items: baseline; margin: 4px 0; }
+.tier { flex: none; font-size: 10px; font-weight: 800; text-transform: uppercase; border-radius: 4px; padding: 1px 5px; color: #fff; min-width: 76px; text-align: center; }
+.tier.beginner { background: #6aaa64; } .tier.intermediate { background: #c9a227; } .tier.expert { background: #b25fc9; }
+.handsum { border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; margin: 10px 0; background: #fff; font-size: 13px; }
+.handsum table { width: 100%; border-collapse: collapse; } .handsum td, .handsum th { padding: 2px 4px; text-align: center; } .handsum td:first-child, .handsum th:first-child { text-align: left; }
+.lasttrick { display: flex; gap: 6px; align-items: center; justify-content: center; font-size: 12px; margin-top: 4px; }
+.waitbox { text-align: center; padding: 30px 8px; color: #fff; } .waitbox .players { justify-content: center; }
+@media (max-width: 400px) {
+  .tt { height: 280px; } .tt-seat { width: 32%; font-size: 11px; } .tt-seat.w, .tt-seat.e { top: 74px; }
+  .tt-center { width: 110px; } .bidpad button { font-size: 14px; padding: 7px 0; }
+}
+.tt-me { margin-top: 6px; border-top: 1px dashed rgba(255,255,255,.25); padding-top: 6px; } .tt-me .tt-who { justify-content: center; } .tt-me .stack { color: #f9df6d; }
+.tut-next { display: flex; align-items: center; gap: 6px; justify-content: center; margin-top: 4px; color: #f9df6d; }
+@media (max-width: 400px) { .tutor-row { flex-direction: column; gap: 2px; } }

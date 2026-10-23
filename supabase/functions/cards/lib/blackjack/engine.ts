@@ -17,7 +17,7 @@ export type BJState = {
   game: "blackjack"; seats: Seat[]; shoe: Card[]; decks: number; dealer: Card[]; holeHidden: boolean;
   phase: "betting" | "insurance" | "play"; turn: { seat: number; hand: number } | null; round: number;
   minBet: number; maxBet: number; deadline: number | null; timeoutMs: number; botLevel: Level;
-  log: Ev[]; ledger: Ledger[]; results: { seat: number; name: string; kind: string; bet: number; net: number; hands: Hand[] }[]; reshuffled: boolean; startedAt: number;
+  log: Ev[]; ledger: Ledger[]; results: { seat: number; name: string; kind: string; bet: number; net: number; hands: Hand[] }[]; reshuffled: boolean; startedAt: number; tutorial?: boolean; live?: boolean;
 };
 export type Move = { t: "bet"; amount: number } | { t: "sitout" } | { t: "insurance"; take: boolean } | { t: Action };
 export type Ctx = { rng: Rng; now: number };
@@ -29,12 +29,12 @@ const ERR: Record<Level, number> = { easy: 0.22, medium: 0.07, hard: 0 };
 const emptySeat = (): Seat => ({ kind: "empty", name: "", stack: 0, bet: 0, decided: false, insurance: null, hands: [], inRound: false, idle: 0 });
 export function botSeat(i: number, level: Level): Seat { return { ...emptySeat(), kind: "bot", name: `${BOT_NAMES[i % BOT_NAMES.length]} 🤖`, level, stack: START_STACK }; }
 
-export function newTable(o: { seats: number; botLevel: Level; now: number; rng: Rng; minBet?: number; maxBet?: number; timeoutMs?: number; shoe?: Card[] }): BJState {
+export function newTable(o: { seats: number; botLevel: Level; now: number; rng: Rng; minBet?: number; maxBet?: number; timeoutMs?: number; shoe?: Card[]; tutorial?: boolean; live?: boolean }): BJState {
   const n = Math.max(1, Math.min(4, o.seats));
   return {
     game: "blackjack", seats: Array.from({ length: n }, (_, i) => botSeat(i, o.botLevel)), shoe: o.shoe ?? shuffle(makeDeck(6), o.rng), decks: 6,
     dealer: [], holeHidden: true, phase: "betting", turn: null, round: 1, minBet: o.minBet ?? 10, maxBet: o.maxBet ?? 500,
-    deadline: null, timeoutMs: o.timeoutMs ?? 30000, botLevel: o.botLevel, log: [], ledger: [], results: [], reshuffled: false, startedAt: o.now,
+    deadline: null, timeoutMs: o.timeoutMs ?? 30000, botLevel: o.botLevel, log: [], ledger: [], results: [], reshuffled: false, startedAt: o.now, tutorial: !!o.tutorial, live: !!o.live,
   };
 }
 const humans = (s: BJState) => s.seats.filter((x) => x.kind === "human");
@@ -239,9 +239,12 @@ export function timeout(s0: BJState, ctx: Ctx): BJState {
   return s;
 }
 
-/** What every client may see: no shoe order, dealer hole card hidden until revealed, no seat tokens. */
+/** What every client may see: no shoe order, dealer hole card hidden until revealed, no seat tokens.
+ *  A tutorial table (solo only: the server refuses a second human) shows the hole card and the next cards in the shoe. */
 export function publicView(s: BJState) {
+  const tut = !!s.tutorial;
   return {
+    tutorial: tut, holeHidden: s.holeHidden, next: tut ? s.shoe.slice(0, 4) : null, tutDealer: tut ? s.dealer : null,
     game: s.game, phase: s.phase, round: s.round, turn: s.turn, minBet: s.minBet, maxBet: s.maxBet, deadline: s.deadline, botLevel: s.botLevel,
     shoeLeft: s.shoe.length, shoeSize: s.decks * 52, reshuffled: s.reshuffled,
     dealer: s.holeHidden && s.dealer.length ? [s.dealer[0], null] : s.dealer,

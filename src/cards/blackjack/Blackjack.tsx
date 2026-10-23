@@ -8,6 +8,8 @@ import { beep, confetti } from "../../lib/fx";
 import { useCardTable } from "../api";
 import { CardRow } from "../ui/PlayingCard";
 import { TrainCard } from "../ui/TrainCard";
+import { TutorTips } from "../ui/TrickTable";
+import { bjTips } from "./tutor";
 import { handValue, basicStrategy, sameValue, ACTION_LABEL, type Action } from "./strategy";
 import type { PublicBJ } from "./engine";
 import { runCoach, Replay, type CoachResult } from "./coach";
@@ -23,14 +25,15 @@ const totalText = (cards: (string | null)[]) => {
 const RESULT: Record<string, string> = { blackjack: "Blackjack!", win: "Win", push: "Push", lose: "Lose", bust: "Bust" };
 
 export default function BlackjackPage({ params }: { params: URLSearchParams }) {
-  const live = params.get("mode") === "live";
+  const tutorial = params.get("tut") === "1";
+  const live = params.get("mode") === "live" && !tutorial;
   const seats = Math.max(2, Math.min(4, Number(params.get("seats")) || 3));
   const bot = ["easy", "medium", "hard"].includes(params.get("bot") || "") ? params.get("bot")! : "medium";
   const train = params.get("train") === "1";
   const [room] = useState(() => params.get("room") || newRoomId());
-  useEffect(() => { if (!params.get("room")) history.replaceState(null, "", "#" + gameUrl({ game: "blackjack", mode: live ? "live" : "solo", seats, bot, train: train ? 1 : undefined, room })); }, [room]);
+  useEffect(() => { if (!params.get("room")) history.replaceState(null, "", "#" + gameUrl({ game: "blackjack", mode: live ? "live" : "solo", seats, bot, train: train ? 1 : undefined, tut: tutorial ? 1 : undefined, room })); }, [room]);
   const [name] = useState(() => ensurePlayer());
-  const T = useCardTable<PublicBJ>(room, { game: "blackjack", seats, bot, name });
+  const T = useCardTable<PublicBJ>(room, { game: "blackjack", seats, bot, name, live, tutorial });
   const { pub, seat } = T;
   const me: PSeat | null = pub && seat >= 0 ? pub.seats[seat] : null;
   const [bet, setBet] = useState(() => Number(localStorage.getItem("bj_bet")) || 25);
@@ -40,6 +43,7 @@ export default function BlackjackPage({ params }: { params: URLSearchParams }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 500); return () => clearInterval(t); }, []);
   useEffect(() => () => { if (live) T.leave(); }, []);
+  const [tips, setTips] = useState<{ tier: string; text: string }[] | null>(null);
 
   // result feedback once per settled round
   const lastRound = useRef(0);
@@ -65,11 +69,23 @@ export default function BlackjackPage({ params }: { params: URLSearchParams }) {
     : { cards: hand!.cards, dealerUp: pub!.dealer[0]!, seen, legal, handsSoFar: me!.hands.length };
   const coachAfter = (chosen: string | null) => { const inp = coachInput(); setTimeout(() => setCoach(runCoach(inp, chosen)), 30); };
 
+  const tipKey = pub ? `${pub.round}|${pub.phase}|${myTurn ? hand?.cards.length : "-"}|${pub.turn?.hand}|${insuranceNow}` : "";
+  useEffect(() => {
+    if (!tutorial || !pub || !(myTurn || insuranceNow) || !me) { setTips(null); return; }
+    const t = setTimeout(() => {
+      const inp = coachInput(); const c = runCoach(inp, null, 8000);
+      const cards = insuranceNow ? me.hands[0].cards : hand!.cards;
+      const b = insuranceNow ? null : basicStrategy(cards, pub.dealer[0]!, legal.includes("double"), legal.includes("split"));
+      setTips(bjTips({ cards, up: pub.dealer[0]!, hole: pub.holeHidden ? pub.tutDealer?.[1] ?? null : null, next: pub.next ?? [], basic: b, coach: c, insurance: insuranceNow }));
+    }, 40);
+    return () => clearTimeout(t);
+  }, [tipKey, tutorial]);
+
   const play = (a: Action) => { beep("tap"); setHintOn(false); if (train) coachAfter(a); else setCoach(null); T.act({ t: a }); };
   const insure = (take: boolean) => { if (train) coachAfter(take ? "insure" : "noinsure"); T.act({ t: "insurance", take }); };
   const askHint = () => { setHintOn(true); T.hint(); coachAfter(null); };
   const placeBet = () => { const a = Math.max(pub!.minBet, Math.min(bet, pub!.maxBet, me!.stack)); localStorage.setItem("bj_bet", String(a)); setCoach(null); T.act({ t: "bet", amount: a }); };
-  const newTable = () => go(gameUrl({ game: "blackjack", mode: live ? "live" : "solo", seats, bot, train: train ? 1 : undefined }) + `&n=${Date.now()}`);
+  const newTable = () => go(gameUrl({ game: "blackjack", mode: live ? "live" : "solo", seats, bot, train: train ? 1 : undefined, tut: tutorial ? 1 : undefined }) + `&n=${Date.now()}`);
 
   if (!pub) return <div className="game bj"><GameHeader title="Blackjack" game="blackjack" room={live ? room : null} status="connecting" /><p className="center muted">{T.err || "Shuffling a fresh 6-deck shoe…"}</p></div>;
 
@@ -80,6 +96,7 @@ export default function BlackjackPage({ params }: { params: URLSearchParams }) {
   const myResult = pub.phase === "betting" ? pub.results.find((r) => r.seat === seat) : undefined;
   const others = pub.seats.map((s, i) => ({ s, i })).filter(({ i }) => i !== seat);
   const dealerTotal = totalText(pub.dealer);
+  const shownDealer = pub.tutorial && pub.tutDealer ? pub.tutDealer : pub.dealer;
   const basic = hand && pub.dealer[0] ? basicStrategy(hand.cards, pub.dealer[0], legal.includes("double"), legal.includes("split")) : null;
 
   const seatBox = (s: PSeat, i: number, mine?: boolean) => (
@@ -106,8 +123,9 @@ export default function BlackjackPage({ params }: { params: URLSearchParams }) {
       <div className="felt">
         <div className="bj-dealer">
           <div className="bj-label">Dealer <span className="muted">· stands on all 17s · BJ pays 3:2</span></div>
-          <div key={dealKey} className="bj-dealer-cards">{pub.dealer.length ? <CardRow cards={pub.dealer} /> : <div className="bj-empty">Place your bets</div>}</div>
-          {dealerTotal && <div className="tot big">{dealerTotal}</div>}
+          <div key={dealKey} className="bj-dealer-cards">{pub.dealer.length ? <CardRow cards={shownDealer} /> : <div className="bj-empty">Place your bets</div>}</div>
+          {dealerTotal && <div className="tot big">{pub.tutorial && pub.holeHidden && pub.tutDealer?.length ? `${dealerTotal} (+ hole ${totalText(pub.tutDealer)})` : dealerTotal}</div>}
+          {pub.tutorial && pub.next && <div className="tiny tut-next">📖 Next in the shoe: <CardRow cards={pub.next} small /></div>}
           <div className="shoe" title="Cards left in the shoe"><i style={{ width: `${(pub.shoeLeft / pub.shoeSize) * 100}%` }} /><span>{pub.reshuffled ? "New shoe" : `Shoe ${Math.round((pub.shoeLeft / pub.shoeSize) * 100)}%`}</span></div>
         </div>
         <div className={`bj-others n${others.length}`}>{others.map(({ s, i }) => seatBox(s, i))}</div>
@@ -117,6 +135,7 @@ export default function BlackjackPage({ params }: { params: URLSearchParams }) {
       {myResult && <div className={`bj-banner ${myResult.net > 0 ? "good" : myResult.net < 0 ? "bad" : ""}`}>{myResult.net > 0 ? `+${fmt(myResult.net)} chips` : myResult.net < 0 ? `−${fmt(-myResult.net)} chips` : "Push — bet returned"}</div>}
       {T.err && <p className="warn center">{T.err}</p>}
 
+      {tutorial && tips && (myTurn || insuranceNow) && <TutorTips tips={tips} busy={false} sample="Odds come from the Monte Carlo coach using only the cards a real player sees; the Peek line uses the face-up cards." />}
       {coach && <TrainCard rows={coach.rows} chosen={coach.chosen} title={coach.chosen ? "Coach — how your move compares" : "Hint — every option, simulated"} gapText={coach.gap}
         sample={`Probabilities from ${coach.n.toLocaleString()} Monte Carlo hands per option.`} onClose={() => setCoach(null)} replay={(k) => <Replay input={coach.input} action={k} />} />}
       <div className="bj-controls">

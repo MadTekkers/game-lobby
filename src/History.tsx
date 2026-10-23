@@ -7,8 +7,8 @@ import { isActive } from "./lib/lobby";
 import { ChipsBoard } from "./cards/ChipsBoard";
 
 type Row = { player: string; game: string; puzzle_id: number; won: boolean; mistakes: number; hints: number; seconds: number; created_at: string; room_id: string | null; detail?: any };
-const NAMES: Record<string, string> = { strands: "Mini Strands", wordle: "Wordle", connections: "Connections", crossword: "Crossword", mini: "The Mini", bee: "Spelling Bee", spywords: "Spy Words", blackjack: "Blackjack" };
-const CARD_GAMES = ["blackjack"];
+const NAMES: Record<string, string> = { strands: "Mini Strands", wordle: "Wordle", connections: "Connections", crossword: "Crossword", mini: "The Mini", bee: "Spelling Bee", spywords: "Spy Words", blackjack: "Blackjack", spades: "Spades" };
+const CARD_GAMES = ["blackjack", "spades"];
 const spyLabel = (r: Row) => { const d = r.detail || {}; const w = d.mode === "duet" ? (d.winner === "team" ? "Agents won" : "Agents lost") : `${d.winner === "red" ? "Red" : "Blue"} won`; return `${d.mode === "duet" ? "Duo" : "Classic"} · ${w} · ${d.turns ?? r.hints} turns${d.role ? ` · ${d.team ? d.team + " " : ""}${d.role}` : ""}`; };
 
 export default function History({ params }: { params: URLSearchParams }) {

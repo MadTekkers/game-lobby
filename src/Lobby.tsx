@@ -16,7 +16,7 @@ export default function Lobby({ room }: { room: string }) {
   const me = getPlayer();
   const url = row ? gameUrl({ ...row.params, room }) : "";
   useEffect(() => { if (row?.game === "spywords") go(url); }, [row?.game]); // Spy Words has its own team-picking lobby inside the room
-  useEffect(() => { if (row && row.status !== "lobby") { rememberRoom({ room, game: row.game, url, name: row.name || undefined }); rememberPeers(players.filter((p) => p !== me)); go(url); } }, [row?.status]);
+  useEffect(() => { if (row && row.status !== "lobby") { rememberRoom({ room, game: row.game, url, name: row.name || undefined }); rememberPeers(players.filter((p) => p !== me)); go(GAME_META[row.game]?.cards ? `${url}&expect=${players.length}` : url); } }, [row?.status]);
   if (!row) return <p className="center muted">Loading lobby…</p>;
   const cap = row.params.seats ? row.params.seats : row.params.mode === "versus" ? CAPS.versus : CAPS.shared;
   const isHost = row.host === me;
