@@ -5,7 +5,7 @@ import { ensurePlayer, getPlayer, newRoomId } from "../../lib/player";
 import { gameUrl } from "../../lib/lobby";
 import { go } from "../../lib/router";
 import { beep, confetti } from "../../lib/fx";
-import { useCardTable } from "../api";
+import { useCardTable, useAutoStart } from "../api";
 import { CardRow, PlayingCard } from "../ui/PlayingCard";
 import { TrainCard } from "../ui/TrainCard";
 import { TrickTable, HandFan, TutorTips, cardName, type SeatInfo } from "../ui/TrickTable";
@@ -55,8 +55,7 @@ export default function SpadesPage({ params }: { params: URLSearchParams }) {
   const lastPhase = useRef("");
   useEffect(() => { if (!pub) return; if (pub.phase === "gameover" && lastPhase.current && lastPhase.current !== "gameover" && pub.winner?.includes(myTeam)) confetti(); lastPhase.current = pub.phase; }, [pub?.phase]);
   // lobby start: once everyone from the lobby is seated, deal
-  const started = useRef(false);
-  useEffect(() => { if (!pub || started.current || pub.phase !== "waiting" || !expect || seat < 0) return; if (pub.seats.filter((s) => s.kind === "human").length >= expect) { started.current = true; T.act({ t: "start" }); } }, [pub?.seats.map((s) => s.kind).join()]);
+  useAutoStart(T, expect, pub);
 
   // tutorial: tips at every decision
   const decisionKey = pub ? `${pub.phase}|${pub.handNo}|${pub.actor}|${pub.history.length}|${pub.trick.length}|${hand?.length}` : "";

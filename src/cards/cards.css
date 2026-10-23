@@ -147,3 +147,30 @@
 .fan-c.recv .pc-face { outline: 2px dashed #6aaa64; outline-offset: -3px; }
 .hrt-pass { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .hrt-pts { color: #c0392b; font-weight: 700; }
+/* ---- Texas Hold'em ---- */
+.pk-felt { padding: 10px 8px 12px; }
+.pk-seats { display: grid; gap: 6px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.pk-seats.n1 { grid-template-columns: minmax(0, 160px); justify-content: center; } .pk-seats.n2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .pk-seats.n3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.pk-seat { background: rgba(0,0,0,.2); border-radius: 10px; padding: 5px; min-width: 0; font-size: 11px; transition: box-shadow .2s, opacity .3s; text-align: center; }
+.pk-seat.turn, .pk-me.turn { box-shadow: 0 0 0 2px #f9df6d; } .pk-seat.out { opacity: .5; } .pk-seat.won { box-shadow: 0 0 0 2px #9fe08f; }
+.pk-h { display: flex; align-items: center; gap: 4px; min-width: 0; justify-content: center; }
+.pk-h .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.pk-cards { display: flex; justify-content: center; min-height: 40px; align-items: center; margin: 2px 0; }
+.pk-cards .pc.sm { width: 26px; height: 37px; } .pk-cards .pc-row { gap: 2px; }
+.pk-line { display: flex; justify-content: center; gap: 4px; align-items: center; } .pk-line .stack, .pk-me .stack { color: #f9df6d; font-variant-numeric: tabular-nums; }
+.pk-bet { background: #f9df6d; color: #222; border-radius: 9px; padding: 0 6px; font-weight: 700; font-size: 11px; font-variant-numeric: tabular-nums; animation: pop .3s both; }
+.pk-act { min-height: 14px; color: #e4f2e9; } .pk-act .good { color: #b9f3a8; }
+.pk-btn { background: #fff; color: #222; border-radius: 50%; width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; font: 700 10px/1 "Libre Franklin", sans-serif; flex: none; }
+.pk-bl { font-size: 9px; background: rgba(255,255,255,.2); border-radius: 4px; padding: 0 3px; flex: none; }
+.pk-board { margin: 10px 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.pk-cards5 { display: flex; gap: 4px; min-height: 52px; } .pk-slot { width: 36px; height: 52px; border: 1px dashed rgba(255,255,255,.3); border-radius: 6px; }
+.pk-cards5 .pc.sm { width: 36px; height: 52px; }
+.pk-pot { font-size: 14px; text-align: center; } .pk-pot .muted { color: #cfe8d8; }
+.pk-me { background: rgba(255,255,255,.12); border-radius: 12px; padding: 8px; }
+.pk-me .pk-h { justify-content: flex-start; font-size: 14px; } .pk-me .stack { margin-left: auto; }
+.pk-hole { display: flex; align-items: center; gap: 10px; justify-content: center; margin-top: 4px; min-height: 60px; }
+.pk-made { color: #f9df6d; font-weight: 700; }
+.pk-actions .controls { flex-wrap: wrap; justify-content: center; } .pk-raise input { width: 100%; margin: 8px 0 4px; accent-color: #1f6b42; }
+.pill.hinted { box-shadow: 0 0 0 3px #f9df6d; }
+.pk-shown { display: inline-flex; flex-direction: column; gap: 2px; margin: 6px 0; } .pk-shown .won b, .pk-shown .won .small { font-weight: 700; color: #3a8f3a; }
+@media (max-width: 360px) { .pk-seats { grid-template-columns: repeat(3, minmax(0, 1fr)); } .pk-cards5 .pc.sm, .pk-slot { width: 32px; height: 46px; } }

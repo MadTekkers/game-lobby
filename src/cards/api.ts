@@ -66,3 +66,17 @@ export function useCardTable<P extends { deadline: number | null }, V = unknown>
   const hint = useCallback(() => call({ action: "hint" }), [call]);
   return { pub, priv, seat, pending, err, busy, act, leave, hint, setErr, refresh: () => call({ action: "view" }) };
 }
+
+/** Lobby "Create lobby → start": once `expect` humans are seated, the lowest seated human deals. Re-polls and retries every 3 s
+ *  while the table is still waiting, so a missed realtime frame or a lost write race can't leave the table stuck. */
+export function useAutoStart(T: { seat: number; act: (m: Record<string, unknown>) => Promise<void>; refresh: () => unknown }, expect: number, pub: { phase: string; seats: { kind: string }[] } | null) {
+  const humans = pub ? pub.seats.filter((s) => s.kind === "human").length : 0;
+  const waiting = pub?.phase === "waiting";
+  const first = pub ? pub.seats.findIndex((s) => s.kind === "human") : -1;
+  useEffect(() => {
+    if (!expect || !waiting || T.seat < 0) return;
+    const go = () => { if (humans >= expect && T.seat === first) T.act({ t: "start" }); else T.refresh(); };
+    if (humans >= expect && T.seat === first) go();
+    const iv = setInterval(go, 3000); return () => clearInterval(iv);
+  }, [expect, waiting, T.seat, humans, first]);
+}

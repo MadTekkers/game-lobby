@@ -21,6 +21,11 @@ const CFG: Record<string, Cfg> = {
     bots: { easy: "Passes its highest cards, plays loosely", medium: "Ducks, counts cards, flushes the queen", hard: "Simulates the hidden hands" },
     train: "after every pass and card, compare your move with 1–3 alternatives (chance of eating Q♠, expected points and moon odds from a few hundred simulated deals).",
     tutorial: "Every hand face-up, with beginner → expert tips and Monte Carlo odds at every pass and card." },
+  holdem: { seats: [2, 3, 4, 5, 6, 7, 8], def: 6, seatLabel: (n) => (n === 2 ? "heads-up" : n <= 6 ? "short" : "full"),
+    seatNote: "No-limit, blinds 5/10, buy in for 1,000 (or your bankroll if less). Chips settle against your bankroll after every hand. A joining player takes a bot's seat at the next hand.",
+    bots: { easy: "Calling station: plays most hands, rarely folds a pair", medium: "Tight chart, plays its equity, bluffs a little", hard: "Position charts, reads ranges, c-bets and semi-bluffs" },
+    train: "after every action, compare it with 1–3 alternatives: equity, how often a bet folds everyone out, and EV in chips/bb from a few hundred Monte Carlo samples (sample size shown).",
+    tutorial: "Every hole card face-up, with beginner → expert tips (pot odds, outs, ranges, EV) before each action, plus your exact equity against the real hands." },
 };
 
 /** Setup screen for the card games: solo vs bots or a live table, seat count, bot level, train mode. */

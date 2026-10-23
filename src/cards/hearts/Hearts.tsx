@@ -5,7 +5,7 @@ import { ensurePlayer, getPlayer, newRoomId } from "../../lib/player";
 import { gameUrl } from "../../lib/lobby";
 import { go } from "../../lib/router";
 import { beep, confetti } from "../../lib/fx";
-import { useCardTable } from "../api";
+import { useCardTable, useAutoStart } from "../api";
 import { CardRow } from "../ui/PlayingCard";
 import { TrainCard } from "../ui/TrainCard";
 import { TrickTable, HandFan, TutorTips, cardName, type SeatInfo } from "../ui/TrickTable";
@@ -56,8 +56,7 @@ export default function HeartsPage({ params }: { params: URLSearchParams }) {
   useEffect(() => { if (!pub?.lastHand) return; if (lastNo.current >= 0 && pub.lastHand.handNo !== lastNo.current) { setShowSum(true); beep((pub.lastHand.points[seat] ?? 0) <= 3 ? "good" : "bad"); } lastNo.current = pub.lastHand.handNo; }, [pub?.lastHand?.handNo]);
   const lastPhase = useRef("");
   useEffect(() => { if (!pub) return; if (pub.phase === "gameover" && lastPhase.current && lastPhase.current !== "gameover" && pub.winner?.includes(seat)) confetti(); lastPhase.current = pub.phase; }, [pub?.phase]);
-  const started = useRef(false);
-  useEffect(() => { if (!pub || started.current || pub.phase !== "waiting" || !expect || seat < 0) return; if (pub.seats.filter((s) => s.kind === "human").length >= expect) { started.current = true; T.act({ t: "start" }); } }, [pub?.seats.map((s) => s.kind).join()]);
+  useAutoStart(T, expect, pub);
 
   // tutorial: tips at every decision (pass and every card)
   const decisionKey = pub ? `${pub.phase}|${pub.handNo}|${pub.actor}|${pub.history.length}|${pub.trick.length}|${hand?.length}|${mustPass}` : "";

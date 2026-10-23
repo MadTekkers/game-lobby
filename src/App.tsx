@@ -11,6 +11,7 @@ import SpySetup from "./games/spywords/SpySetup";
 import BlackjackPage from "./cards/blackjack/Blackjack";
 import SpadesPage from "./cards/spades/Spades";
 import HeartsPage from "./cards/hearts/Hearts";
+import HoldemPage from "./cards/holdem/Holdem";
 import CardSetup from "./cards/CardSetup";
 import History from "./History";
 import Archive from "./Archive";
@@ -30,6 +31,7 @@ const GAMES: { id: GameId; desc: string; color: string; icon: string; team?: boo
   { id: "blackjack", desc: "Beat the dealer to 21 — solo vs bots or a live table, with a coach.", color: "#2f8a57", icon: "🂡" },
   { id: "spades", desc: "Bid your tricks, trump with spades, dodge the bags. Partners, cutthroat or two-hand, with a coach.", color: "#2b3a55", icon: "♠️" },
   { id: "hearts", desc: "Pass three, duck the Q♠, or shoot the moon. Four, three or two players, with a coach.", color: "#a8323e", icon: "♥️" },
+  { id: "holdem", desc: "No-limit Texas Hold'em for 2–8: blinds, side pots, bots that bluff, and an equity coach.", color: "#1f6b42", icon: "🃏" },
 ];
 const ago = (t: string | number) => { const m = Math.round((Date.now() - new Date(t).getTime()) / 60000); return m < 1 ? "just now" : m < 60 ? `${m}m ago` : `${Math.round(m / 60)}h ago`; };
 
@@ -96,6 +98,7 @@ export default function App() {
     if (path === "/blackjack") return <BlackjackPage key={k} params={params} />;
     if (path === "/spades") return <SpadesPage key={k} params={params} />;
     if (path === "/hearts") return <HeartsPage key={k} params={params} />;
+    if (path === "/holdem") return <HoldemPage key={k} params={params} />;
     if (path === "/archive") return <Archive key={k} />;
     if (path === "/history") return <History key={k} params={params} />;
     return <Home />;

@@ -3,7 +3,7 @@
 import { chromium } from "playwright-core";
 const B = process.env.BASE || "http://127.0.0.1:5199/";
 const GAMES = (process.env.GAMES || "blackjack,spades").split(",");
-const READY = { blackjack: ".bet-box", spades: ".tt-me", hearts: ".fan-c", holdem: ".hm-me" };
+const READY = { blackjack: ".bet-box", spades: ".tt-me", hearts: ".fan-c", holdem: ".pk-me" };
 const browser = await chromium.launch({ executablePath: "/usr/bin/google-chrome", args: ["--no-sandbox"] });
 const mk = async (name) => { const ctx = await browser.newContext({ viewport: { width: 360, height: 780 } });
   await ctx.addInitScript((n) => { localStorage.setItem("gm_player", n); localStorage.setItem("gm_sound", "off"); }, name);
@@ -16,8 +16,8 @@ for (const g of GAMES) {
     await H.waitForSelector("text=Start game", { timeout: 20000 }); const lobby = H.url();
     await G.goto(lobby); await H.waitForTimeout(2500);
     await H.click("text=Start game");
-    await Promise.all([H.waitForSelector(READY[g], { timeout: 30000 }), G.waitForSelector(READY[g] + (g === "blackjack" ? "" : ", .tt-me"), { timeout: 30000 })]);
-    const hn = await H.evaluate(() => document.querySelectorAll(".tt-seat, .bj-seat").length);
+    await Promise.all([H.waitForSelector(READY[g], { timeout: 30000 }), G.waitForSelector(READY[g] + (g === "blackjack" ? "" : g === "holdem" ? ", .pk-seat" : ", .tt-me"), { timeout: 30000 })]);
+    const hn = await H.evaluate(() => document.querySelectorAll(".tt-seat, .bj-seat, .pk-seat").length);
     await H.screenshot({ path: `/workspace/screenshots/lobby-${g}-host.png`, fullPage: true }); await G.screenshot({ path: `/workspace/screenshots/lobby-${g}-guest.png`, fullPage: true });
     const gt = await G.textContent("body");
     console.log(g, "OK host", H.url().split("#")[1], "| seats rendered", hn, "| guest sees host:", gt.includes("Host" + g.slice(0, 2)));
