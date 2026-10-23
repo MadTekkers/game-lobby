@@ -45,6 +45,28 @@ the server refuses a second player at a tutorial table, so nobody can use it to 
 beginner rule of thumb, the basic-strategy play, the simulated odds for each option, and a "peek" line saying what the face-up cards
 mean — with a reminder to judge the play by the odds, not by the peek.
 
+## Card counting (Count tab, tutorial and Train)
+The **Count** tab trains the Hi-Lo system, the most widely taught balanced count.
+
+- **Tags:** 2–6 = **+1**, 7–9 = **0**, 10/J/Q/K/A = **−1**. A full deck sums to 0, so a positive count means more tens and aces are left (good for the player).
+- **Running count (RC):** add the tag of every card you see — other players' cards, your own, the dealer's upcard, and the hole card once it's turned. The app's count starts at 0 on every shuffle and counts every card shown at the table (the server tracks earlier rounds; the hole card only counts after it's revealed).
+- **Keeping track while playing:** count in pairs that cancel (a 5 and a K = 0), glance at each new card as it lands rather than re-adding hands, and update the count only for new cards. Practise with the count hidden, then check yourself in the quiz.
+- **True count (TC):** RC ÷ decks remaining. The app estimates decks remaining to the nearest half deck (as you'd judge a discard tray) and truncates toward zero, e.g. RC +7 with 3.5 decks left → TC +2.
+- **Bet spread:** bet more only when the TC is positive — the app's suggestion is 1 unit at TC ≤ 1, then 2 / 4 / 6 / 8 units at TC +2 / +3 / +4 / +5 and up. Each +1 of true count is worth roughly +0.5% to the player.
+- **Index plays (Illustrious 18):** deviations from basic strategy when the TC crosses a threshold. The most valuable: **take insurance at TC ≥ +3**, **stand 16 vs 10 at TC ≥ 0**, stand 15 vs 10 at +4, split 10s vs 5 at +5 and vs 6 at +4, double 10 vs 10 at +4, stand 12 vs 3 at +2 and 12 vs 2 at +3, double 11 vs A at +1, double 9 vs 2 at +1; hit 13 vs 2 at ≤ −1 and 12 vs 4 at ≤ 0. The full table is in the app's "How to count" section and in `src/cards/blackjack/count.ts`.
+- **Quiz:** every 3 rounds at betting time the app asks for the running count (and optionally the true count), then shows the per-card tag breakdown. Your accuracy is saved on this device.
+
+Counting is legal, but casinos may refuse your action or shuffle up; online games with continuous shufflers make it useless.
+
+Counting sources:
+- [Wikipedia — Card counting](https://en.wikipedia.org/wiki/Card_counting) (Hi-Lo tags, running vs true count, Illustrious 18)
+- [Wizard of Odds — Introduction to the High-Low card counting strategy](https://wizardofodds.com/games/blackjack/card-counting/high-low/)
+- [Wizard of Odds — Hi-Lo count indices](https://wizardofodds.com/games/blackjack/appendix/4/)
+- Don Schlesinger, *Blackjack Attack: Playing the Pros' Way* (origin of the "Illustrious 18" index list)
+
+## Rules check-in (Rules tab, tutorial)
+Eleven short questions with explanations: card values, the ace, soft vs hard totals, when to hit soft hands, busting, dealer rules (stands on all 17s), the 3:2 blackjack payout, doubling, splitting, insurance (2:1) and pushes. Progress is saved on this device; "Reset" starts over.
+
 ## Sources
 - Wizard of Odds — [Blackjack basics](https://wizardofodds.com/games/blackjack/basics/), [strategy calculator](https://wizardofodds.com/games/blackjack/strategy/calculator/), [house-edge calculator](https://wizardofodds.com/games/blackjack/calculator/), [count indices](https://wizardofodds.com/games/blackjack/appendix/4/)
 - [Blackjack Apprenticeship strategy charts](https://www.blackjackapprenticeship.com/blackjack-strategy-charts/)
