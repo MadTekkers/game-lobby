@@ -91,8 +91,8 @@ function match(A: Sim.Level, B: Sim.Level, hands: number, seed: number) {
   return edge / (2 * hands);
 }
 describe("hearts bots", () => {
-  it("medium takes fewer points than easy", () => { const e = match("medium", "easy", 60, 3); process.stdout.write(`EDGE medium-easy ${e.toFixed(2)}\n`); expect(e).toBeGreaterThan(1.5); }, 60000);
-  it("hard takes fewer points than medium", () => { const e = match("hard", "medium", 40, 4); process.stdout.write(`EDGE hard-medium ${e.toFixed(2)}\n`); expect(e).toBeGreaterThan(0.5); }, 120000);
+  it("medium takes fewer points than easy", () => { const e = match("medium", "easy", 60, 3); console.log(`EDGE medium-easy ${e.toFixed(2)}`); expect(e).toBeGreaterThan(1.5); }, 60000);
+  it("hard takes fewer points than medium", () => { const e = match("hard", "medium", 40, 4); console.log(`EDGE hard-medium ${e.toFixed(2)}`); expect(e).toBeGreaterThan(0.5); }, 120000);
 });
 import * as C from "./cards/hearts/coach";
 describe("hearts coach", () => {
