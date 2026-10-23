@@ -147,3 +147,72 @@
 .rq-opt { text-align: left; border: 1px solid #878a8c; background: #fff; color: #121212; border-radius: 10px; padding: 8px 10px; font-size: 14px; }
 .rq-opt:disabled { opacity: 1; cursor: default; } .rq-opt.right { background: #e6f4ea; border-color: #2e7d32; color: #1e5c22; font-weight: 700; } .rq-opt.wrong { background: #fdecea; border-color: #c0392b; color: #8c2318; }
 .rq-why { font-size: 13px; border-radius: 8px; padding: 6px 8px; margin: 8px 0; } .rq-why.ok { background: #e6f4ea; color: #1e5c22; } .rq-why.warn { background: #fdecea; color: #8c2318; }
+
+/* ---------- Hold'em oval table ---------- */
+.pkt { position: relative; height: 560px; margin: 6px -4px 4px; color: #fff; }
+.pkt-oval { position: absolute; left: 6%; right: 6%; top: 9%; bottom: 14%; border-radius: 50%; background: radial-gradient(ellipse at 50% 45%, #1e6d44 0%, #165636 60%, #10472b 100%);
+  box-shadow: inset 0 0 0 3px #0e3d25, inset 0 0 30px rgba(0,0,0,.35), 0 0 0 12px #5b3417, 0 0 0 14px #3d220e, 0 12px 26px rgba(0,0,0,.3); }
+.pkt-oval::after { content: ""; position: absolute; inset: 9%; border-radius: 50%; border: 1px solid rgba(249,223,109,.3); }
+.pk-center { position: absolute; left: 50%; top: 47.4%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 4px; z-index: 1; }
+.pk-dk, .pk-burn { position: absolute; top: -6px; display: flex; flex-direction: column; align-items: center; gap: 1px; font-size: 10px; color: #e4f2e9; }
+.pk-dk { right: calc(50% + 6px); flex-direction: row; gap: 4px; } .pk-burn { left: calc(50% + 6px); flex-direction: row; gap: 4px; min-width: 40px; }
+.pk-dk, .pk-burn { transform: translateY(-100%); } .pk-burn > .tiny, .pk-dk > .tiny { color: #e4f2e9; }
+.pk-burn { gap: 6px; } .pk-burn .burnc + .tiny { margin-right: 2px; }
+.pk-deck { display: block; width: 22px; height: 31px; border-radius: 4px; background: repeating-linear-gradient(45deg, #b8322f 0 3px, #9b2826 3px 6px); border: 2px solid #fff; box-shadow: 1px 1px 0 #ddd, 2px 2px 0 #bbb, 3px 3px 0 rgba(0,0,0,.3); }
+.pk-burn .burns { display: flex; min-width: 20px; min-height: 29px; } .pk-burn .burnc { display: block; } .pk-burn .burnc + .burnc { margin-left: -14px; }
+.pk-burn .pc.sm { width: 20px; height: 29px; }
+.pkt .pk-board { margin: 0; flex-direction: row; }
+.pkt .pk-cards5 { gap: 4px; min-height: 46px; } .pkt .pk-cards5 .pc.sm, .pkt .pk-slot { width: 32px; height: 46px; }
+.pkt .pk-slot { border-color: rgba(255,255,255,.28); }
+.pkt .pk-pot { position: relative; display: flex; align-items: center; gap: 6px; background: rgba(0,0,0,.32); border-radius: 999px; padding: 3px 10px; font-size: 13px; max-width: 280px; text-align: center; }
+.pkt .pk-pot .sub { color: #e4f2e9; font-size: 11px; }
+.pkt .pk-pot .stk, .pk-betstack .stk { position: relative; display: inline-block; width: 16px; height: 16px; flex: none; }
+.pkt .stk .disc { position: absolute; left: 0; width: 16px; height: 16px; border-width: 2px; }
+.pk-street { color: #e4f2e9; }
+.pks { position: absolute; transform: translate(-50%, -50%); width: 84px; padding: 4px 3px; z-index: 3; background: rgba(10,30,20,.82); border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,.35); }
+.pks .pk-cards { margin: 0 0 2px; min-height: 37px; }
+.pk-plate { display: flex; align-items: center; gap: 3px; justify-content: center; min-width: 0; }
+.pk-plate .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; font-size: 11px; }
+.pk-plate .stack { color: #f9df6d; font-variant-numeric: tabular-nums; font-size: 11px; margin-left: 2px; }
+.pks .pk-act { font-size: 10px; min-height: 12px; }
+.pks.out .pk-cards { opacity: .45; } .pks.out { background: rgba(10,30,20,.6); } .pks.turn { box-shadow: 0 0 0 2px #f9df6d, 0 2px 8px rgba(0,0,0,.4); }
+.pks.won { box-shadow: 0 0 0 2px #9fe08f, 0 0 14px rgba(159,224,143,.6); }
+.pks .pend { color: #e4f2e9; }
+.pks.pk-me { width: 150px; background: rgba(10,30,20,.88); box-shadow: inset 0 0 0 1px rgba(255,255,255,.4), 0 2px 8px rgba(0,0,0,.4); padding: 6px; z-index: 4; }
+.pks.pk-me.turn { box-shadow: 0 0 0 3px #f9df6d, 0 0 16px rgba(249,223,109,.5); }
+.pks.pk-me .pk-cards { min-height: 58px; } .pks.pk-me .pk-cards .pc { width: 42px; height: 58px; } .pks.pk-me .pc-row { gap: 4px; }
+.pks.pk-me .pk-plate .nm, .pks.pk-me .pk-plate .stack { font-size: 13px; }
+.pks .pk-made { display: block; margin: 2px auto 3px; background: #f9df6d; color: #1a1a1a; border-radius: 999px; padding: 1px 8px; font-size: 11.5px; line-height: 1.35; }
+.pk-betstack { position: absolute; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 3px; z-index: 2; }
+.pk-mk { position: absolute; transform: translate(-50%, -50%); z-index: 2; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font: 800 9px/1 "Libre Franklin", sans-serif; box-shadow: 0 1px 2px rgba(0,0,0,.5); }
+.pk-mk.btn { background: #fff; color: #121212; font-size: 11px; border: 2px solid #d3d6da; }
+.pk-mk.sb { background: #2f62c0; color: #fff; } .pk-mk.bb { background: #f9df6d; color: #121212; }
+.game.pk .bj-controls { margin-top: 8px; }
+.game.pk .bj-controls .bj-banner { position: static; display: inline-block; translate: none; }
+@media (min-width: 700px) {
+  .pkt { height: 600px; }
+  .pks { width: 108px; } .pks .pk-cards .pc.sm { width: 34px; height: 48px; } .pks .pk-cards { min-height: 48px; }
+  .pks.pk-me { width: 180px; } .pks.pk-me .pk-cards .pc { width: 52px; height: 74px; } .pks.pk-me .pk-cards { min-height: 74px; }
+  .pkt .pk-cards5 .pc.sm, .pkt .pk-slot { width: 46px; height: 66px; } .pkt .pk-cards5 { min-height: 66px; gap: 6px; }
+  .pk-plate .nm, .pk-plate .stack { font-size: 12px; } .pkt .pk-pot { font-size: 15px; }
+}
+@media (max-width: 380px) { .pks { width: 74px; } .pkt .pk-cards5 .pc.sm, .pkt .pk-slot { width: 29px; height: 42px; } }
+/* tally + learn cards (light panel → dark text) */
+.tally { color: #121212; } .tally-me { margin: 0 0 6px; } .tally-lead { margin: 0 0 6px; font-size: 14px; }
+.tally-list { list-style: none; margin: 0 0 6px; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.tally-list li { display: grid; grid-template-columns: 28px minmax(0, 1fr) 74px; grid-template-rows: auto auto; column-gap: 6px; align-items: center; padding: 5px 6px; border: 1px solid #d3d6da; border-radius: 8px; background: #fff; }
+.tally-list li.me { border-color: #165636; background: #eef7f1; }
+.tally-list .rk { grid-row: span 2; font-weight: 800; color: #165636; } .tally-list .nm { font-weight: 700; font-size: 13px; }
+.tally-list .hand { grid-column: 2; color: #3d4147; } .tally-list .eq { grid-column: 3; grid-row: 1 / span 2; position: relative; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; font-size: 13px; padding-bottom: 6px; }
+.tally-list .eq i { position: absolute; left: 0; bottom: 0; height: 4px; background: #2e7d32; border-radius: 2px; }
+.learn { color: #121212; display: flex; flex-direction: column; gap: 6px; }
+.lc { display: flex; flex-direction: column; gap: 3px; text-align: left; width: 100%; border: 1px solid #d3d6da; background: #fff; color: #121212; border-radius: 10px; padding: 8px 10px; font: inherit; cursor: pointer; }
+.lc.open { background: #f6f7f8; } .lc.hot { border-color: #b8860b; background: #fff8e1; }
+.lc-t { font-weight: 700; font-size: 14px; } .lc-t em { font-style: normal; font-size: 11px; background: #8a5a00; color: #fff; border-radius: 999px; padding: 0 6px; margin-left: 4px; }
+.lc-b { font-size: 13px; line-height: 1.45; color: #2b2f33; }
+.lc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; } .lc-grid .lc.open { grid-column: span 2; }
+.lc-now { display: flex; flex-direction: column; gap: 3px; color: #3d4147; margin-bottom: 6px; }
+.learn .rk { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.learn .rk li { border-bottom: 1px solid #e3e5e8; padding-bottom: 4px; } .learn .rk-h { display: flex; justify-content: space-between; gap: 6px; align-items: baseline; }
+.learn .rk-c { display: flex; gap: 2px; margin: 3px 0; } .learn .rk-c .pc.sm { width: 24px; height: 34px; }
+.learn .tiny, .tally .tiny { color: #3d4147; }
