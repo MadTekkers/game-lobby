@@ -1,5 +1,6 @@
 // Tutorial / Train panel: a sticky right column on wide screens, a collapsible bottom sheet on phones.
 // The sheet starts collapsed to a slim handle; when expanded it scrolls the table so the player's own hand stays above it.
+import { DealSpeed } from "./DealSpeed";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 export type PanelTab = { id: string; label: string; badge?: string | number | null; body: ReactNode; peek?: string | null };
@@ -50,7 +51,7 @@ export function SidePanel({ tabs, active, onTab, keepVisible, attention }: {
         {!wide && <button className="sp-toggle" onClick={() => setOpen(!open)} aria-label={open ? "Collapse panel" : "Expand panel"}>{open ? "▾" : "▴"}</button>}
       </div>
       {!expanded && cur.peek && <button className="sp-peek" onClick={() => setOpen(true)}>{cur.peek}</button>}
-      {expanded && <div className="sp-body" role="tabpanel">{cur.body}</div>}
+      {expanded && <div className="sp-body" role="tabpanel">{cur.body}<div className="sp-speed"><DealSpeed id="deal-speed-panel" /></div></div>}
     </aside>
   );
 }

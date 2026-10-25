@@ -1,7 +1,7 @@
 // Blackjack rules engine: pure, deterministic given an RNG. Used by the edge function (authoritative) and the client (UI, hints, train mode).
 // Rules: 6-deck shoe (reshuffle below 25%), dealer stands on all 17s (hits soft 16), dealer peeks on A/10, blackjack pays 3:2,
 // double on any first two cards (also after split), split up to 3 hands (aces: one card each, no resplit), insurance 2:1, no surrender.
-import { type Card, type Rng, makeDeck, shuffle, IllegalMove, clone } from "../core.ts";
+import { type Card, type Rng, makeDeck, shuffle, IllegalMove, clone, frame } from "../core.ts";
 import { handValue, isBlackjack, sameValue, basicStrategy, cardValue, type Action } from "./strategy.ts";
 
 export type Level = "easy" | "medium" | "hard";
@@ -151,9 +151,9 @@ function nextTurn(s: BJState, ctx: Ctx) {
   s.turn = null; dealerPlay(s, ctx);
 }
 function dealerPlay(s: BJState, ctx: Ctx) {
-  s.holeHidden = false;
+  s.holeHidden = false; s.turn = null; frame(s); // hole card flips
   const live = s.seats.some((x) => x.inRound && x.hands.some((h) => handValue(h.cards).total <= 21 && !isBlackjack(h.cards, !!h.split)));
-  if (live) while (handValue(s.dealer).total < 17) { const c = draw(s, ctx); s.dealer.push(c); log(s, { t: "dealer", card: c }, ctx.now); }
+  if (live) while (handValue(s.dealer).total < 17) { const c = draw(s, ctx); s.dealer.push(c); log(s, { t: "dealer", card: c }, ctx.now); frame(s); }
   settle(s, ctx);
 }
 function settle(s: BJState, ctx: Ctx) {
@@ -189,6 +189,7 @@ function settle(s: BJState, ctx: Ctx) {
 
 /** Bots act until a human must decide; also deals once every seat has decided. */
 function advance(s: BJState, ctx: Ctx): BJState {
+  frame(s); // the move that was just made (yours or a bot's), before anyone else acts
   for (let guard = 0; guard < 200; guard++) {
     if (s.phase === "betting") {
       for (let i = 0; i < s.seats.length; i++) { const b = s.seats[i]; if (b.kind === "bot" && !b.decided) { b.bet = botBet(s, b, ctx.rng); b.stack -= b.bet; b.decided = true; } }

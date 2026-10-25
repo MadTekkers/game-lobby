@@ -1,5 +1,6 @@
 // Shared trick-taking table (Spades, Hearts): seats around a felt, the current trick in the middle, your hand fanned at the bottom.
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { dealSpeed } from "./fly";
 import { Avatar } from "../../Lobby";
 import { PlayingCard, CardRow } from "./PlayingCard";
 import { RANK_LABEL, SUIT_SYMBOL, type Card } from "../core";
@@ -9,9 +10,23 @@ export type SeatInfo = { name: string; kind: string; line: ReactNode; count: num
 const POS: Record<number, string[]> = { 2: ["s", "n"], 3: ["s", "w", "e"], 4: ["s", "w", "n", "e"] };
 export const relPos = (n: number, me: number, i: number) => POS[n][(i - me + n) % n];
 
-export function TrickTable({ n, me, seats, trick, trickSeats, actor, deadline, timeoutMs = 30000, center, trickKey }: {
+export function TrickTable({ n, me, seats, trick, trickSeats, actor, deadline, timeoutMs = 30000, center, trickKey, lastWinner }: {
   n: number; me: number; seats: SeatInfo[]; trick: Card[]; trickSeats: number[]; actor: number; deadline: number | null; timeoutMs?: number; center?: ReactNode; trickKey: string | number;
+  /** Winner of the trick that was just collected: the finished trick slides to them. */
+  lastWinner?: number | null;
 }) {
+  const vme = me < 0 ? 0 : me;
+  const prev = useRef<{ trick: Card[]; seats: number[] }>({ trick: [], seats: [] });
+  const [ghost, setGhost] = useState<{ cards: Card[]; seats: number[]; to: string; ms: number; k: number } | null>(null);
+  const gt = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useLayoutEffect(() => {
+    const p = prev.current; prev.current = { trick, seats: trickSeats };
+    if (p.trick.length === n && trick.length === 0 && lastWinner != null && lastWinner >= 0 && dealSpeed() !== 0) {
+      const ms = 650 / dealSpeed(); setGhost({ cards: p.trick, seats: p.seats, to: relPos(n, vme, lastWinner), ms, k: Date.now() });
+      if (gt.current) clearTimeout(gt.current); gt.current = setTimeout(() => setGhost(null), ms + 60);
+    }
+  }, [trick.join(","), n]);
+  useEffect(() => () => { if (gt.current) clearTimeout(gt.current); }, []);
   const [now, setNow] = useState(Date.now());
   useEffect(() => { if (!deadline) return; const t = setInterval(() => setNow(Date.now()), 500); return () => clearInterval(t); }, [deadline]);
   const secs = deadline ? Math.max(0, Math.ceil((deadline - now) / 1000)) : null;
@@ -26,8 +41,11 @@ export function TrickTable({ n, me, seats, trick, trickSeats, actor, deadline, t
           {s.pending && <div className="tiny">↪ {s.pending} next hand</div>}
           {actor === i && secs !== null && <div className="clock"><i style={{ width: `${Math.min(100, (secs * 1000 / timeoutMs) * 100)}%` }} /></div>}
         </div>))}
+      {ghost && <div key={ghost.k} className={`tt-center tt-ghost to-${ghost.to}`} style={{ animationDuration: `${ghost.ms}ms` }} aria-hidden>
+        {ghost.cards.map((c, k) => <div key={c} className={`tt-play still ${relPos(n, vme, ghost.seats[k])}`} style={{ zIndex: k + 1 }}><PlayingCard card={c} small /></div>)}
+      </div>}
       <div className="tt-center" key={trickKey}>
-        {trick.map((c, k) => <div key={c} className={`tt-play ${relPos(n, me < 0 ? 0 : me, trickSeats[k])}`} style={{ zIndex: k + 1 }}><PlayingCard card={c} small /></div>)}
+        {trick.map((c, k) => <div key={c} className={`tt-play ${relPos(n, vme, trickSeats[k])}`} style={{ zIndex: k + 1 }}><PlayingCard card={c} small /></div>)}
         {center && <div className="tt-msg">{center}</div>}
       </div>
     </div>

@@ -177,3 +177,29 @@
 
 /* text on the felt: muted grey is unreadable on green, use a light tint (≥ 4.5:1 on #1d6a42) */
 .felt .muted { color: #d5ecdd; }
+
+/* Replay: trick cards slide in from their seat, a finished trick slides to its winner. */
+.tt-play.s { animation-name: tt-in-s; } .tt-play.n { animation-name: tt-in-n; } .tt-play.w { animation-name: tt-in-w; } .tt-play.e { animation-name: tt-in-e; }
+.tt-play { animation-duration: .32s; animation-timing-function: cubic-bezier(.2,.75,.3,1); animation-fill-mode: both; }
+.tt-play.still { animation: none; }
+@keyframes tt-in-s { from { translate: 0 90px; opacity: 0; } } @keyframes tt-in-n { from { translate: 0 -90px; opacity: 0; } }
+@keyframes tt-in-w { from { translate: -110px 0; opacity: 0; } } @keyframes tt-in-e { from { translate: 110px 0; opacity: 0; } }
+.tt-ghost { pointer-events: none; animation: tt-out-s .65s ease-in forwards; z-index: 3; }
+.tt-ghost.to-n { animation-name: tt-out-n; } .tt-ghost.to-w { animation-name: tt-out-w; } .tt-ghost.to-e { animation-name: tt-out-e; }
+@keyframes tt-out-s { 30% { opacity: 1; } to { translate: 0 140px; scale: .4; opacity: 0; } }
+@keyframes tt-out-n { 30% { opacity: 1; } to { translate: 0 -150px; scale: .4; opacity: 0; } }
+@keyframes tt-out-w { 30% { opacity: 1; } to { translate: -150px 0; scale: .4; opacity: 0; } }
+@keyframes tt-out-e { 30% { opacity: 1; } to { translate: 150px 0; scale: .4; opacity: 0; } }
+
+/* Deal speed slider + replay skip, under every card table */
+.replay-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 14px; margin: 8px auto 4px; max-width: 560px; }
+.deal-speed { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 4px 8px; font-size: 13px; }
+.deal-speed label { font-weight: 600; }
+.deal-speed input[type=range] { width: 130px; accent-color: var(--accent, #2e7d32); }
+.deal-speed .ds-val { min-width: 92px; color: var(--muted, #555); font-variant-numeric: tabular-nums; }
+.deal-speed .ds-presets { display: inline-flex; gap: 4px; }
+.deal-speed .ds-p { font: inherit; font-size: 12px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line, #c9c9c9); background: var(--bg, #fff); color: var(--text, #111); cursor: pointer; }
+.deal-speed .ds-p.on { background: var(--text, #111); color: var(--bg, #fff); border-color: var(--text, #111); }
+.replay-skip { animation: pop .2s both; } .replay-skip small { opacity: .7; margin-left: 4px; }
+.replay-bar.on { position: sticky; bottom: 8px; z-index: 20; background: var(--bg, #fff); border-radius: 14px; padding: 6px 10px; box-shadow: 0 2px 10px rgba(0,0,0,.15); }
+@media (max-width: 420px) { .deal-speed input[type=range] { width: 110px; } .deal-speed .ds-val { min-width: 0; } }

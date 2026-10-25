@@ -32,3 +32,9 @@ export const SUIT_SYMBOL: Record<string, string> = { S: "♠", H: "♥", D: "♦
 export const RANK_LABEL = (r: string) => (r === "T" ? "10" : r);
 export const isRed = (c: Card) => c[1] === "H" || c[1] === "D";
 export const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x));
+
+/** Presentation frames: the server sets `frameRec.on` while it applies a move, and the engines call `frame(s)` after each visible
+ *  step (a bot's action, a dealer draw, a street, a card into the trick). The server turns each into a *public* snapshot so the client
+ *  can replay the steps one by one. No-op on the client and in tests. `over` patches the snapshot (e.g. a full trick before it's collected). */
+export const frameRec: { on: ((s: unknown, over?: Record<string, unknown>) => void) | null } = { on: null };
+export function frame(s: unknown, over?: Record<string, unknown>) { frameRec.on?.(s, over); }

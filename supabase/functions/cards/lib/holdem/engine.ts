@@ -2,7 +2,7 @@
 // 2–8 seats, blinds 5/10, 1,000-chip buy-ins (capped by bankroll). Min-raise = last full raise; a short all-in doesn't reopen
 // betting for players who already acted. Pots split into side pots by contribution level; odd chips go left of the button.
 // Heads-up: the button posts the small blind and acts first preflop, last after. Chips settle against the bankroll every hand.
-import { type Card, type Rng, shuffle, IllegalMove, clone, makeDeck } from "../core.ts";
+import { type Card, type Rng, shuffle, IllegalMove, clone, makeDeck, frame } from "../core.ts";
 import { evaluate, describe } from "./eval.ts";
 import * as Sim from "./sim.ts";
 import { type BaseSeat, type Ctx, type Level, type Pending, type TableBase, botBase, humanBase, paramsFor, pushLog, humanCount, stripSeat } from "../seats.ts";
@@ -87,6 +87,7 @@ function settleStreet(s: PkState, ctx: Ctx) {
     h.board.push(...h.deck.splice(0, h.street === 1 ? 3 : 1));
     h.bet = h.bet.map(() => 0); h.acted = h.acted.map(() => false); h.canRaise = h.canRaise.map(() => true); h.maxBet = 0; h.lastRaise = s.bb;
     h.aggr = h.aggr.map(() => false); h.last = h.last.map((x, i) => (h.folded[i] ? x : h.allIn[i] ? "All-in" : null));
+    frame(s, { actor: -1 }); // the street is dealt
     const acts = h.inHand.map((_, i) => i).filter((i) => canAct(h, i));
     if (acts.length >= 2) { h.turn = nextFrom(s, s.button, (i) => canAct(h, i)); return; }
   }
@@ -106,7 +107,7 @@ export function buildPots(contrib: number[], folded: boolean[], inHand: boolean[
 }
 function endHand(s: PkState, ctx: Ctx) {
   const h = s.h!; const alive = live(h); const uncontested = alive.length === 1;
-  while (!uncontested && h.board.length < 5) { h.deck.shift(); h.board.push(...h.deck.splice(0, h.board.length === 0 ? 3 : 1)); }
+  while (!uncontested && h.board.length < 5) { h.deck.shift(); h.board.push(...h.deck.splice(0, h.board.length === 0 ? 3 : 1)); frame(s, { actor: -1 }); }
   const score = (i: number) => evaluate([...h.holes[i], ...h.board]);
   const scores = h.holes.map((_, i) => (alive.includes(i) && !uncontested ? score(i) : -1));
   const pots: Pot[] = [];
@@ -171,7 +172,7 @@ function act(s: PkState, i: number, m: Move, ctx: Ctx) {
     h.last[i] = h.allIn[i] ? `All-in ${to}` : `${wasBet ? "Bet" : "Raise to"} ${to}`; pushLog(s, `${nm} ${h.allIn[i] ? "goes all-in for" : wasBet ? "bets" : "raises to"} ${to}`, ctx.now);
   } else throw new IllegalMove(`Can't ${m.t} now`);
   h.acted[i] = true; h.canRaise[i] = false;
-  h.turn = i; settleStreet(s, ctx);
+  h.turn = i; frame(s); settleStreet(s, ctx);
 }
 function botParams(s: PkState, i: number, ctx: Ctx, level: Level) { return paramsFor(Sim.DEFAULT_PARAMS, Sim.PARAM_BOUNDS, level, s.seats[i].variant, ctx); }
 export function botMove(s: PkState, i: number, ctx: Ctx, levelOverride?: Level) {

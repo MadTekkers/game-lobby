@@ -6,7 +6,8 @@
 // - A seat is claimed with a random per-seat secret token kept in the browser; only its SHA-256 is stored.
 // - Nightly "tune" action (shared secret, hash in app_secrets): reviews card_hands and A/B-tunes bot params (bot_params).
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { cryptoRng, IllegalMove } from "./lib/core.ts";
+import { cryptoRng, IllegalMove, frameRec } from "./lib/core.ts";
+import { AsyncLocalStorage } from "node:async_hooks";
 import * as BJ from "./lib/blackjack/engine.ts";
 import * as SP from "./lib/spades/engine.ts";
 import { spadesTuner } from "./lib/spades/tune.ts";
@@ -99,21 +100,39 @@ async function recordResults(id: string, before: State, after: State, eng: Engin
 }
 
 /** Load -> mutate -> CAS save, retrying on concurrent writes. */
+// Replay frames: public snapshots of each visible step inside one move (bot actions, dealer draws, streets, trick cards).
+// Built with publicView, so a frame never shows more than the table showed at that moment. Scoped per request.
+const frameStore = new AsyncLocalStorage<{ eng: Engine; frames: unknown[]; last: string }>();
+const MAX_FRAMES = 80;
+frameRec.on = (s, over) => {
+  const fr = frameStore.getStore(); if (!fr) return;
+  const v = { ...(fr.eng.publicView(s as State) as Record<string, unknown>), ...(over ?? {}) }; delete v.log; delete v.deadline;
+  const j = JSON.stringify(v); if (j === fr.last) return; fr.last = j; fr.frames.push(JSON.parse(j));
+};
+function finishFrames(fr: { frames: unknown[] }, eng: Engine, after: State) {
+  const f = fr.frames.slice(-MAX_FRAMES);
+  const end = { ...(eng.publicView(after) as Record<string, unknown>) }; delete end.log; delete end.deadline;
+  if (f.length && JSON.stringify(f[f.length - 1]) === JSON.stringify(end)) f.pop();
+  return f;
+}
+
 async function mutate(id: string, fn: (s: State, eng: Engine, c: Ctx) => Promise<State> | State) {
   for (let attempt = 0; attempt < 4; attempt++) {
     const row = await load(id); if (!row) throw new IllegalMove("Table not found");
     const eng = ENGINES[row.state.game]; if (!eng) throw new Error("Unknown game");
     const before = row.state; before.ledger = [];
     const c: Ctx = { rng: cryptoRng(), now: Date.now(), params: eng.generic ? await params(before.game) : undefined };
-    const after = await fn(before, eng, c);
+    const fr = { eng, frames: [] as unknown[], last: "" };
+    const after = await frameStore.run(fr, () => fn(before, eng, c));
     if (after === before) return { state: before, version: row.version };
     const done = await settleLedger(after); after.ledger = [];
     await recordResults(id, before, after, eng);
     const { data, error } = await db.from("card_secrets").update({ state: after, version: row.version + 1, updated_at: new Date().toISOString() }).eq("id", id).eq("version", row.version).select("id");
     if (error) { await undoLedger(done); throw error; }
     if (!data?.length) { await undoLedger(done); continue; } // lost the race; retry on fresh state
-    await db.from("card_games").update({ public: eng.publicView(after), version: row.version + 1, updated_at: new Date().toISOString() }).eq("id", id);
-    return { state: after, version: row.version + 1 };
+    const frames = finishFrames(fr, eng, after);
+    await db.from("card_games").update({ public: { ...eng.publicView(after), frames }, version: row.version + 1, updated_at: new Date().toISOString() }).eq("id", id);
+    return { state: after, version: row.version + 1, frames };
   }
   throw new Error("Table busy, try again");
 }
@@ -149,9 +168,9 @@ Deno.serve(async (req) => {
     const token = String(b.token || ""); const th = token.length >= 16 ? await sha(token) : "";
     const mySeat = (s: State) => (th ? ENGINES[s.game].findSeat(s, th) : -1);
     const pendingSeat = (s: State) => (th ? s.seats.findIndex((x: State) => x.pending?.tokenHash === th) : -1);
-    const reply = (r: { state: State; version: number }) => {
+    const reply = (r: { state: State; version: number; frames?: unknown[] }) => {
       const eng = ENGINES[r.state.game]; const seat = mySeat(r.state);
-      return json({ version: r.version, seat, pending: pendingSeat(r.state), public: eng.publicView(r.state), private: seat >= 0 && eng.privateView ? eng.privateView(r.state, seat) : null });
+      return json({ version: r.version, seat, pending: pendingSeat(r.state), public: { ...eng.publicView(r.state), frames: r.frames ?? [] }, private: seat >= 0 && eng.privateView ? eng.privateView(r.state, seat) : null });
     };
 
     switch (b.action) {

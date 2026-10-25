@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { ReplayBar } from "../ui/DealSpeed";
 import { GameHeader } from "../../games/common";
 import { Avatar } from "../../Lobby";
 import { ensurePlayer, getPlayer, newRoomId } from "../../lib/player";
@@ -8,7 +9,7 @@ import { beep, confetti } from "../../lib/fx";
 import { useCardTable } from "../api";
 import { PlayingCard } from "../ui/PlayingCard";
 import { SidePanel, type PanelTab } from "../ui/SidePanel";
-import { chipStack, flyChips, dealBusyFor, type Fly } from "../ui/fly";
+import { chipStack, flyChips, dealBusyFor, dealSpeed, type Fly } from "../ui/fly";
 import { CountPanel, RulesQuiz } from "./trainer";
 import { TrainCard } from "../ui/TrainCard";
 import { TutorTips } from "../ui/TrickTable";
@@ -107,6 +108,26 @@ export default function BlackjackPage({ params }: { params: URLSearchParams }) {
     return () => clearTimeout(t);
   }, [tipKey, tutorial, showShoe]);
 
+  // Replay call-outs: what each seat just did (diffed from the previous frame), shown briefly on that seat.
+  const prevPub = useRef<PublicBJ | null>(null);
+  const [said, setSaid] = useState<{ seat: number; text: string; k: number } | null>(null);
+  useEffect(() => {
+    const a = prevPub.current; prevPub.current = pub;
+    if (!a || !pub || a.round !== pub.round || pub.phase !== "play") return;
+    for (let i = 0; i < pub.seats.length; i++) {
+      const ha = a.seats[i]?.hands ?? [], hb = pub.seats[i]?.hands ?? []; if (!ha.length || !hb.length) continue;
+      let text = "";
+      if (hb.length > ha.length) text = "Split";
+      else for (let k = 0; k < hb.length && !text; k++) {
+        const x = ha[k], y = hb[k]; if (!x || !y) continue;
+        if (y.cards.length > x.cards.length) text = y.doubled && !x.doubled ? "Double" : handValue(y.cards).total > 21 ? "Hit · Bust!" : handValue(y.cards).total === 21 ? "Hit · 21" : "Hit";
+        else if (y.done && !x.done) text = "Stand";
+      }
+      if (text) { setSaid({ seat: i, text, k: Date.now() }); break; }
+    }
+  }, [pub]);
+  useEffect(() => { if (!said) return; const t = setTimeout(() => setSaid(null), 1500 / (dealSpeed() || 4)); return () => clearTimeout(t); }, [said]);
+
   const play = (a: Action) => { beep("tap"); setHintOn(false); if (train) coachAfter(a); else setCoach(null); T.act({ t: a }); };
   const insure = (take: boolean) => { if (train) coachAfter(take ? "insure" : "noinsure"); T.act({ t: "insurance", take }); };
   const askHint = () => { setHintOn(true); T.hint(); coachAfter(null); };
@@ -118,6 +139,7 @@ export default function BlackjackPage({ params }: { params: URLSearchParams }) {
   const dealKey = pub.phase === "betting" ? pub.round - 1 : pub.round;
   const humansHere = pub.seats.filter((s) => s.kind === "human").map((s) => s.name).filter((n) => n !== getPlayer());
   const waitingOn = pub.phase === "play" && pub.turn ? pub.seats[pub.turn.seat] : null;
+  const dealerTurn = pub.phase === "play" && !pub.turn && !pub.holeHidden;
   const secsLeft = pub.deadline ? Math.max(0, Math.ceil((pub.deadline - now) / 1000)) : null;
   const myResult = pub.phase === "betting" ? pub.results.find((r) => r.seat === seat) : undefined;
   const dealerTotal = totalText(pub.dealer);
@@ -162,6 +184,7 @@ export default function BlackjackPage({ params }: { params: URLSearchParams }) {
           {(s.insurance ?? 0) > 0 && <span className="ins" title="Insurance">INS {s.insurance}</span>}
         </div>
         <div className="bj-plate"><Avatar name={s.name} size={mine ? 22 : 18} /><b className="nm">{mine ? "You" : s.name}</b><span className="stack">{fmt(s.stack)}</span></div>
+        {said?.seat === i && <span key={said.k} className="bj-said" role="status">{said.text}</span>}
         {s.pending && <div className="tiny pend">↪ {s.pending.name} next hand</div>}
         {pub.turn?.seat === i && secsLeft !== null && <div className="clock"><i style={{ width: `${Math.min(100, (secsLeft / 30) * 100)}%` }} /></div>}
       </div>
@@ -175,11 +198,14 @@ export default function BlackjackPage({ params }: { params: URLSearchParams }) {
         <button className="pill act no" disabled={T.busy} onClick={() => insure(false)}>No thanks</button>
       </>) : (<>
         {(["hit", "stand", "double", "split"] as Action[]).filter((a) => legal.includes(a) || a === "hit" || a === "stand").map((a) => <button key={a} className={`pill act ${a} ${hintOn && basic === a ? "hinted" : ""}`} disabled={T.busy || !legal.includes(a)} onClick={() => play(a)}>{ACTION_LABEL[a]}</button>)}
-        <button className="pill act hint" onClick={askHint} aria-label="Hint" title="Hint">💡</button>
+        <button className="pill act hint" disabled={T.busy} onClick={askHint} aria-label="Hint" title="Hint">💡</button>
         {hintOn && basic && <span className="bj-acts-l">Basic strategy: <b>{ACTION_LABEL[basic]}</b>{secsLeft !== null && ` · ${secsLeft}s`}</span>}
       </>));
+  // split hands: anchor the tray to the outer edge of the first/last hand so it never spills over a neighbour's cards
+  const myHands = me?.hands.length ?? 0;
+  const splitEdge = myHands > 1 ? (activeHandIdx === 0 ? "edge-l" : activeHandIdx === myHands - 1 ? "edge-r" : "") : "";
   const actsSide = myP && actsInner && (
-    <div className={`bj-acts above ${insuranceNow ? "ins" : ""}`} role="group" aria-label="Your move">{actsInner}</div>
+    <div className={`bj-acts above ${insuranceNow ? "ins" : ""} ${splitEdge}`} role="group" aria-label="Your move">{actsInner}</div>
   );
 
   const table = (
@@ -193,7 +219,7 @@ export default function BlackjackPage({ params }: { params: URLSearchParams }) {
         {pub.tutorial && <button className="shoe-tg" aria-pressed={showShoe} onClick={() => setShowShoe(!showShoe)}>{showShoe ? "Hide shoe" : "Show shoe"}</button>}
         {pub.tutorial && showShoe && pub.next && <div className="tut-next" aria-label="Next cards in the shoe">{pub.next.map((c, z) => <PlayingCard key={`${c}${z}`} card={c} small />)}</div>}
       </div>
-      <div className="bj-dealer">
+      <div className={`bj-dealer ${dealerTurn ? "turn" : ""}`}>
         <div className="bj-label">Dealer</div>
         <div key={dealKey} className="bj-dealer-cards">{pub.dealer.length ? <div className="pc-row">{shownDealer.map((c, z) => <PlayingCard key={pub.tutorial ? `${c}-${z}` : z} card={c} fly={dealerFly(z, z !== 1 || !pub.holeHidden || !!pub.tutorial)} />)}</div> : <div className="bj-empty">Place your bets</div>}</div>
         {dealerTotal && <div className="tot big">{pub.tutorial && pub.holeHidden && pub.tutDealer?.length ? `${dealerTotal} (+ hole ${totalText(pub.tutDealer)})` : dealerTotal}</div>}
@@ -234,6 +260,7 @@ export default function BlackjackPage({ params }: { params: URLSearchParams }) {
       <div className="bj-layout">
         <div className="bj-main">
           {table}
+          <ReplayBar replaying={T.replaying} skip={T.skip} />
           {T.err && <p className="warn center">{T.err}</p>}
           <div className="bj-controls">
             {!me && (T.pending >= 0 ? <p className="muted center">You'll take over seat {T.pending + 1} when this hand ends.</p> : <p className="muted center">Table is full — you're watching. A seat opens when a bot's spot frees up.</p>)}
@@ -248,6 +275,7 @@ export default function BlackjackPage({ params }: { params: URLSearchParams }) {
             {insuranceNow && <p className="muted center">Dealer shows an ace — decide on insurance next to your hand.</p>}
             {pub.phase === "insurance" && !insuranceNow && <p className="muted center">Others are deciding on insurance<span className="dots" /></p>}
             {myTurn && <p className="muted center small">Your move — the buttons are next to your hand.{secsLeft !== null && ` ${secsLeft}s`}</p>}
+            {dealerTurn && <p className="muted center">Dealer plays<span className="dots" /></p>}
             {pub.phase === "play" && !myTurn && waitingOn && <p className="muted center">{waitingOn.kind === "bot" ? "Bots are playing" : `${waitingOn.name} is deciding`}<span className="dots" /></p>}
           </div>
           <div className="bj-foot">

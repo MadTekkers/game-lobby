@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ReplayBar } from "../ui/DealSpeed";
 import { GameHeader } from "../../games/common";
 import { Avatar } from "../../Lobby";
 import { ensurePlayer, getPlayer, newRoomId } from "../../lib/player";
@@ -118,7 +119,7 @@ export default function SpadesPage({ params }: { params: URLSearchParams }) {
             {expect > 0 && <p className="tiny">Auto-deals when {expect} players are seated.</p>}
           </div>
         ) : (
-          <TrickTable n={pub.n} me={seat >= 0 ? seat : 0} seats={info} trick={pub.trick} trickSeats={pub.trickSeats} actor={pub.actor} deadline={pub.deadline} trickKey={`${pub.handNo}-${pub.history.length}`}
+          <TrickTable n={pub.n} me={seat >= 0 ? seat : 0} seats={info} trick={pub.trick} trickSeats={pub.trickSeats} actor={pub.actor} deadline={pub.deadline} trickKey={`${pub.handNo}-${pub.history.length}`} lastWinner={pub.lastTrick?.winner ?? null}
             center={pub.phase === "draw" ? `Stock: ${pub.stockLeft} cards` : pub.phase === "bidding" ? (waitingOn ? `${waitingOn} is bidding…` : "Your bid") : waitingOn && pub.phase === "play" ? `${waitingOn} to play` : winTrick} />
         )}
         {seat >= 0 && pub.phase !== "waiting" && (
@@ -126,6 +127,7 @@ export default function SpadesPage({ params }: { params: URLSearchParams }) {
             {hand ? <HandFan cards={hand} legal={legal} onPick={myTurn && pub.phase === "play" ? playCard : undefined} disabled={T.busy} hinted={hint && hint.length === 2 ? hint : null} /> : priv?.blindOffer ? <div className="center"><PlayingCard card={null} /></div> : null}
           </div>)}
       </div>
+      <ReplayBar replaying={T.replaying} skip={T.skip} />
       {pub.lastTrick && <div className="lasttrick muted">Last trick: <CardRow cards={pub.lastTrick.cards} small /> → {names[pub.lastTrick.winner]}</div>}
       {T.err && <p className="warn center">{T.err}</p>}
 
@@ -146,7 +148,7 @@ export default function SpadesPage({ params }: { params: URLSearchParams }) {
           <p className="center small">How many tricks will you take? {pub.v === "partners" ? "(your bid adds to your partner's)" : ""}</p>
           <div className="bidpad">{Array.from({ length: hs + 1 }, (_, n) => <button key={n} className={`${n === 0 ? "nil" : ""} ${hint === String(n) ? "hinted" : ""}`} disabled={T.busy} onClick={() => bid(n)}>{n === 0 ? "Nil" : n}</button>)}</div>
         </div>)}
-        {myTurn && (pub.phase === "play" || pub.phase === "bidding") && hand && <div className="controls"><button className="pill ghost sm" onClick={askHint}>💡 Hint</button></div>}
+        {myTurn && (pub.phase === "play" || pub.phase === "bidding") && hand && <div className="controls"><button className="pill ghost sm" disabled={T.busy} onClick={askHint}>💡 Hint</button></div>}
         {pub.phase === "gameover" && (<div className="center">
           <div className={`bj-banner ${pub.winner?.includes(myTeam) ? "good" : "bad"}`}>{pub.winner?.map(teamLabel).join(" & ")} win{pub.winner && pub.winner.length > 1 ? "" : "s"} {pub.scores.join(" – ")}</div>
           {me && <p className="small">{pub.winner?.includes(myTeam) ? `+${pub.stake}` : `−${pub.stake}`} chips</p>}

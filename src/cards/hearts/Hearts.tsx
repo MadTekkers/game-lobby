@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ReplayBar } from "../ui/DealSpeed";
 import { GameHeader } from "../../games/common";
 import { Avatar } from "../../Lobby";
 import { ensurePlayer, getPlayer, newRoomId } from "../../lib/player";
@@ -118,7 +119,7 @@ export default function HeartsPage({ params }: { params: URLSearchParams }) {
             {expect > 0 && <p className="tiny">Auto-deals when {expect} players are seated.</p>}
           </div>
         ) : (
-          <TrickTable n={pub.n} me={seat >= 0 ? seat : 0} seats={info} trick={pub.trick} trickSeats={pub.trickSeats} actor={pub.actor} deadline={pub.deadline} trickKey={`${pub.handNo}-${pub.history.length}`} center={center} />
+          <TrickTable n={pub.n} me={seat >= 0 ? seat : 0} seats={info} trick={pub.trick} trickSeats={pub.trickSeats} actor={pub.actor} deadline={pub.deadline} trickKey={`${pub.handNo}-${pub.history.length}`} lastWinner={pub.lastTrick?.winner ?? null} center={center} />
         )}
         {seat >= 0 && pub.phase !== "waiting" && (
           <div className="tt-me hm-me"><div className="tt-who center"><Avatar name={getPlayer()} size={22} /> <b>You</b> <span className="tiny">{seatLine(seat)}</span> <span className="stack tiny">🪙 {me?.stack.toLocaleString()}</span></div>
@@ -126,6 +127,7 @@ export default function HeartsPage({ params }: { params: URLSearchParams }) {
           </div>)}
       </div>
       {pub.phase === "play" && pub.history.length === 0 && !!priv?.received?.length && <p className="center tiny muted">Received from {names[(seat - pub.passOff + pub.n) % pub.n]}: <CardRow cards={priv.received} small /> {priv.passed && <>· you passed <CardRow cards={priv.passed} small /></>}</p>}
+      <ReplayBar replaying={T.replaying} skip={T.skip} />
       {pub.lastTrick && <div className="lasttrick muted">Last trick: <CardRow cards={pub.lastTrick.cards} small /> → {names[pub.lastTrick.winner]}</div>}
       {T.err && <p className="warn center">{T.err}</p>}
 
@@ -138,7 +140,7 @@ export default function HeartsPage({ params }: { params: URLSearchParams }) {
         {mustPass && <div className="hrt-pass"><p className="small">Pick 3 cards to pass to <b>{passToName}</b> ({sel.length}/3): {sel.map(cardName).join(" ")}</p>
           <button className="pill" disabled={T.busy || sel.length !== 3} onClick={doPass}>Pass {Sim.passName(pub.n, pub.passOff)}</button></div>}
         {pub.phase === "pass" && seat >= 0 && !mustPass && <p className="center muted small">You passed {priv?.passed?.map(cardName).join(" ")} — waiting for the others.</p>}
-        {(mustPass || (myTurn && pub.phase === "play")) && hand && <div className="controls"><button className="pill ghost sm" onClick={askHint}>💡 Hint</button></div>}
+        {(mustPass || (myTurn && pub.phase === "play")) && hand && <div className="controls"><button className="pill ghost sm" disabled={T.busy} onClick={askHint}>💡 Hint</button></div>}
         {pub.phase === "gameover" && (<div className="center">
           <div className={`bj-banner ${pub.winner?.includes(seat) ? "good" : "bad"}`}>{pub.winner?.map((i) => names[i]).join(" & ")} win{pub.winner && pub.winner.length > 1 ? "" : "s"} — {pub.scores.map((x, i) => `${names[i]} ${x}`).join(" · ")}</div>
           {me && <p className="small">{pub.winner?.includes(seat) ? `+${pub.stake}` : `−${pub.stake}`} chips</p>}

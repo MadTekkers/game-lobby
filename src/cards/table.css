@@ -10,7 +10,10 @@
 @media (prefers-reduced-motion: reduce) {
   .pc, .pop-in, .res, .bj-banner, .chipfly, .pk-pot, .pk-bet { animation: none !important; }
   .pc-in, .clock i { transition: none !important; }
+  .tt-play { animation: none !important; } .tt-ghost { display: none; }
 }
+[data-deal-speed=instant] .tt-play, [data-deal-speed=instant] .pc { animation: none !important; }
+[data-deal-speed=instant] .tt-ghost { display: none; }
 .switch { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 8px 0; cursor: pointer; }
 .switch input { width: 18px; height: 18px; accent-color: #165636; }
 
@@ -229,3 +232,9 @@
 .bj-acts.above.ins { width: 200px; } .bj-acts.above.ins .act { flex-basis: 100%; }
 @media (min-width: 700px) { .bj-acts.above { width: 210px; gap: 5px; padding: 5px; } .bj-acts.above .act { font-size: 14px; padding: 8px 4px; } .bj-acts.above.ins { width: 230px; } }
 .bjs.mine { z-index: 6; }
+/* Replay call-outs */
+.bj-said { position: absolute; left: 50%; top: -6px; transform: translate(-50%, -100%); z-index: 9; background: #111; color: #fff; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; animation: pop .2s both; pointer-events: none; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+.bj-dealer.turn .bj-label { background: #ffd54f; color: #111; border-radius: 999px; padding: 1px 10px; box-shadow: 0 0 0 3px rgba(255,213,79,.35); }
+.sp-speed { border-top: 1px solid var(--line, #ddd); margin-top: 12px; padding-top: 10px; } .sp-speed .deal-speed { justify-content: flex-start; }
+.bj-acts.above.edge-l { left: 0; translate: 0 0; } .bj-acts.above.edge-l::after { left: 38px; }
+.bj-acts.above.edge-r { left: auto; right: 0; translate: 0 0; } .bj-acts.above.edge-r::after { left: auto; right: 24px; translate: 0 0; }

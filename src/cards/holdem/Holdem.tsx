@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { ReplayBar } from "../ui/DealSpeed";
 import { GameHeader } from "../../games/common";
 import { Avatar } from "../../Lobby";
 import { ensurePlayer, getPlayer, newRoomId } from "../../lib/player";
@@ -229,6 +230,7 @@ export default function HoldemPage({ params }: { params: URLSearchParams }) {
         <div className="team"><span className="nm">Hand</span><b>{pub.handNo}</b><span className="muted tiny">{pub.phase === "betting" ? STREET[pub.street] : pub.phase === "handover" ? "result" : "waiting"}</span></div>
         <div className="team mine"><span className="nm">Your chips</span><b>{me ? me.chips.toLocaleString() : "—"}</b><span className="muted tiny">buy-in {pub.buyIn}</span></div></div>
       {table}
+      <ReplayBar replaying={T.replaying} skip={T.skip} />
       {T.err && <p className="warn center">{T.err}</p>}
       {thinking && !tutorial && !train && <p className="muted tiny center">Simulating…</p>}
 
@@ -239,7 +241,7 @@ export default function HoldemPage({ params }: { params: URLSearchParams }) {
             {toCall > 0 ? <button className={`pill ghost ${hintKey === "fold" ? "hinted" : ""}`} disabled={T.busy} onClick={() => doAct({ t: "fold" })}>Fold</button> : null}
             {toCall > 0 ? <button className={`pill ${hintKey === "call" ? "hinted" : ""}`} disabled={T.busy} onClick={() => doAct({ t: "call" })}>{toCall >= (me?.chips ?? 0) ? `Call all-in ${me?.chips}` : `Call ${toCall}`}</button>
               : <button className={`pill ${hintKey === "check" ? "hinted" : ""}`} disabled={T.busy} onClick={() => doAct({ t: "check" })}>Check</button>}
-            <button className="pill ghost sm" onClick={askHint}>💡 Hint</button>
+            <button className="pill ghost sm" disabled={T.busy} onClick={askHint}>💡 Hint</button>
           </div>
           {pub.canRaise && maxTo > pub.maxBet && (<div className="pk-raise">
             <input type="range" min={minTo} max={maxTo} step={pub.bb / 2} value={Math.min(maxTo, Math.max(minTo, amt))} onChange={(e) => setAmt(Number(e.target.value))} aria-label="Raise amount" />

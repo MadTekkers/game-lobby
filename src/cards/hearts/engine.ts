@@ -2,7 +2,7 @@
 // 4 seats: 13 each, pass left/right/across/hold. 3 seats: 2♦ removed, 17 each, pass left/right/hold.
 // 2 seats: 13 each + 26-card stock drawn after each trick (winner first), pass/hold. Lowest club leads; no points on the first
 // trick; hearts can't be led until broken. Hearts 1, Q♠ 13, moon = 0 for the shooter and 26 for everyone else. Game ends at 100: lowest wins.
-import { type Card, type Rng, shuffle, IllegalMove, clone } from "../core.ts";
+import { type Card, type Rng, shuffle, IllegalMove, clone, frame } from "../core.ts";
 import { sortHand } from "../tricks.ts";
 import * as Sim from "./sim.ts";
 import { type BaseSeat, type Ctx, type Level, type Pending, type TableBase, botBase, humanBase, paramsFor, pushLog, humanCount, stripSeat } from "../seats.ts";
@@ -60,9 +60,11 @@ function doPass(s: HtState, i: number, cards: Card[], ctx: Ctx) {
 }
 function doPlay(s: HtState, i: number, card: Card, ctx: Ctx) {
   if (!Sim.legal(s.h, i).includes(card)) throw new IllegalMove(!s.h.hands[i].includes(card) ? "That card isn't in your hand" : s.h.history.length === 0 && !s.h.trick.length ? "The lowest club leads the first trick" : s.h.trick.length ? "Follow suit (no points on the first trick)" : "Hearts aren't broken yet");
+  if (s.h.trick.length === s.n - 1) frame(s, { trick: [...s.h.trick, card], trickSeats: [...s.h.trickSeats, i], actor: i, counts: s.h.hands.map((x, k) => x.length - (k === i ? 1 : 0)) }); // full trick, before it's collected
   const before = s.h.history.length; Sim.play(s.h, i, card);
   if (s.h.history.length > before) s.lastTrick = s.h.history[s.h.history.length - 1];
   if (Sim.handDone(s.h)) endHand(s, ctx);
+  frame(s);
 }
 function endHand(s: HtState, ctx: Ctx) {
   const h = s.h; const sc = Sim.scoreHand(h.pts);

@@ -1,7 +1,7 @@
 // Spades table engine: authoritative in the edge function, mirrored on the client for UI/coach. Pure TS.
 // 4 seats: partnerships (0&2 vs 1&3). 3 seats: cutthroat (2♣ removed, 17 cards each). 2 seats: draw variant (keep-or-take from the stock).
 // Nil ±100, blind nil ±200 (offered when you trail by 100+, before you look), 10 bags = −100, game to 500 (or a side falls to −200).
-import { type Card, type Rng, shuffle, IllegalMove, clone } from "../core.ts";
+import { type Card, type Rng, shuffle, IllegalMove, clone, frame } from "../core.ts";
 import { sortHand } from "../tricks.ts";
 import * as Sim from "./sim.ts";
 import { type BaseSeat, type Ctx, type Level, type Pending, type TableBase, botBase, humanBase, paramsFor, pushLog, humanCount, stripSeat } from "../seats.ts";
@@ -66,9 +66,11 @@ function doDraw(s: SpState, i: number, keep: boolean) {
 }
 function doPlay(s: SpState, i: number, card: Card, ctx: Ctx) {
   if (!Sim.legal(s.h, i).includes(card)) throw new IllegalMove(s.h.hands[i].includes(card) ? "You must follow suit (and spades can't lead until broken)" : "That card isn't in your hand");
+  if (s.h.trick.length === s.n - 1) frame(s, { trick: [...s.h.trick, card], trickSeats: [...s.h.trickSeats, i], actor: i, counts: s.h.hands.map((x, k) => x.length - (k === i ? 1 : 0)) }); // full trick, before it's collected
   const before = s.h.history.length; Sim.play(s.h, i, card);
   if (s.h.history.length > before) { s.lastTrick = s.h.history[s.h.history.length - 1]; }
   if (Sim.handDone(s.h)) endHand(s, ctx);
+  frame(s);
 }
 function endHand(s: SpState, ctx: Ctx) {
   const h = s.h; const sc = Sim.scoreHand(s.v, h.bids, h.nil, h.tricks); const pen: number[] = [];
