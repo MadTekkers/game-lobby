@@ -27,8 +27,11 @@ const totalText = (cards: (string | null)[]) => {
   return v.total > 21 ? "Bust" : known.length === 2 && v.total === 21 ? "BJ" : v.soft && v.total < 21 ? `${v.total - 10}/${v.total}` : `${v.total}`;
 };
 /** Seat spots along the table's curved edge (first base — seat 1 — on the dealer's left, i.e. the right of the screen). */
-const ANGLES: Record<number, number[]> = { 1: [90], 2: [60, 120], 3: [38, 90, 142], 4: [28, 69, 111, 152] };
-const spot = (i: number, n: number) => { const a = ((ANGLES[n] ?? ANGLES[4])[i] * Math.PI) / 180; return { x: 50 + 40 * Math.cos(a), y: 36 + 54 * Math.sin(a) }; };
+/** Arc angles (90° = bottom centre, smaller = screen right) by offset d from the viewer. The viewer is always at the bottom;
+ *  seats that act after you (d = 1, 2…) sit to your left, the seat before you to your right — the real dealing direction
+ *  (dealer's left = your right) is preserved, only the view rotates. */
+const ARC: Record<number, number[]> = { 1: [90], 2: [90, 140], 3: [90, 140, 40], 4: [90, 135, 172, 40] };
+const spot = (i: number, n: number, vs = 0) => { const d = (i - vs + n) % n; const a = ((ARC[n] ?? ARC[4])[d] * Math.PI) / 180; return { x: 50 + 40 * Math.cos(a), y: 36 + 54 * Math.sin(a) }; };
 const RESULT: Record<string, string> = { blackjack: "Blackjack!", win: "Win", push: "Push", lose: "Lose", bust: "Bust" };
 
 export default function BlackjackPage({ params }: { params: URLSearchParams }) {
@@ -110,14 +113,6 @@ export default function BlackjackPage({ params }: { params: URLSearchParams }) {
   const placeBet = () => { const a = Math.max(pub!.minBet, Math.min(bet, pub!.maxBet, me!.stack)); localStorage.setItem("bj_bet", String(a)); setCoach(null); T.act({ t: "bet", amount: a }); };
   const newTable = () => go(gameUrl({ game: "blackjack", mode: live ? "live" : "solo", seats, bot, train: train ? 1 : undefined, tut: tutorial ? 1 : undefined }) + `&n=${Date.now()}`);
 
-  // the "below" action bar follows the active hand (e.g. after a split): centre it on that hand's cards
-  useLayoutEffect(() => {
-    const bar = document.querySelector<HTMLElement>(".bjt .bj-acts.below"); if (!bar || !pub || seat < 0) return;
-    const k = myTurn ? pub.turn!.hand : 0;
-    const h = document.getElementById(`bj-s${seat}-h${k}`) ?? document.querySelector<HTMLElement>(".bj-seat.mine"); const t = bar.parentElement;
-    if (!h || !t) return; const hr = h.getBoundingClientRect(), tr = t.getBoundingClientRect();
-    bar.style.setProperty("--x", `${Math.round(hr.left + hr.width / 2 - tr.left)}px`);
-  });
   if (!pub) return <div className="game bj"><GameHeader title="Blackjack" game="blackjack" room={live ? room : null} status="connecting" /><p className="center muted">{T.err || "Shuffling a fresh 6-deck shoe…"}</p></div>;
 
   const dealKey = pub.phase === "betting" ? pub.round - 1 : pub.round;
@@ -129,7 +124,7 @@ export default function BlackjackPage({ params }: { params: URLSearchParams }) {
   const shownDealer = pub.tutorial && pub.tutDealer ? pub.tutDealer : pub.dealer;
   const basic = hand && pub.dealer[0] ? basicStrategy(hand.cards, pub.dealer[0], legal.includes("double"), legal.includes("split")) : null;
 
-  const n = pub.seats.length;
+  const n = pub.seats.length; const vs = seat >= 0 ? seat : 0;
   const inRound = pub.seats.map((s, i) => (s.inRound ? i : -1)).filter((i) => i >= 0);
   const animate = live0.current;
   /** deal order: two passes round the table (seat 1 first), dealer last in each pass; then hits seat by seat; the dealer draws last */
@@ -148,7 +143,7 @@ export default function BlackjackPage({ params }: { params: URLSearchParams }) {
   const activeHandIdx = myTurn ? pub.turn!.hand : 0;
 
   const seatEl = (s: PSeat, i: number) => {
-    const mine = i === seat; const p = spot(i, n);
+    const mine = i === seat; const p = spot(i, n, vs);
     const circleAmt = s.hands.length ? s.hands.reduce((a, h) => a + h.bet, 0) : mine && pub.phase === "betting" && !s.decided ? Math.min(bet, s.stack) : s.bet;
     return (
       <div key={i} className={`bj-seat bjs ${mine ? "mine" : ""} ${pub.turn?.seat === i ? "turn" : ""} ${s.kind} ${s.hands.length === 0 ? "idle" : ""}`} style={{ left: `${p.x}%`, top: `${p.y}%` }}>
@@ -172,10 +167,8 @@ export default function BlackjackPage({ params }: { params: URLSearchParams }) {
       </div>
     );
   };
-  const myP = seat >= 0 ? spot(seat, n) : null;
-  // actions go right under my hand when I'm on the low middle of the arc; on the higher wings they sit beside my cards, on the felt side
-  const lowest = Math.max(...pub.seats.map((_, i) => spot(i, n).y));
-  const beside = !!myP && myP.y < lowest - 3;
+  const myP = seat >= 0 ? spot(seat, n, vs) : null;
+  // you're always at the bottom centre: the action tray sits directly above your active hand (inside it, so it follows split hands)
   const actsInner = (myTurn || insuranceNow) && me && (insuranceNow ? (<>
         <span className="bj-acts-l">Insurance {Math.floor(me.bet / 2)}?</span>
         <button className="pill act ins" disabled={T.busy} onClick={() => insure(true)}>Take insurance</button>
@@ -185,11 +178,8 @@ export default function BlackjackPage({ params }: { params: URLSearchParams }) {
         <button className="pill act hint" onClick={askHint} aria-label="Hint" title="Hint">💡</button>
         {hintOn && basic && <span className="bj-acts-l">Basic strategy: <b>{ACTION_LABEL[basic]}</b>{secsLeft !== null && ` · ${secsLeft}s`}</span>}
       </>));
-  const acts = myP && actsInner && !beside && (
-    <div className={`bj-acts below ${insuranceNow ? "ins" : ""}`} style={{ ["--x" as string]: `${myP.x}%`, top: `calc(${myP.y}% + 6px)` }} role="group" aria-label="Your move">{actsInner}</div>
-  );
-  const actsSide = myP && actsInner && beside && (
-    <div className={`bj-acts side ${myP.x > 50 ? "left" : "right"} ${insuranceNow ? "ins" : ""}`} role="group" aria-label="Your move">{actsInner}</div>
+  const actsSide = myP && actsInner && (
+    <div className={`bj-acts above ${insuranceNow ? "ins" : ""}`} role="group" aria-label="Your move">{actsInner}</div>
   );
 
   const table = (
@@ -218,7 +208,6 @@ export default function BlackjackPage({ params }: { params: URLSearchParams }) {
         <text className="p3"><textPath href="#bjp3" startOffset="50%" textAnchor="middle">INSURANCE PAYS 2 TO 1</textPath></text>
       </svg>
       {pub.seats.map((s, i) => seatEl(s, i))}
-      {acts}
       {myResult && <div className={`bj-banner ${myResult.net > 0 ? "good" : myResult.net < 0 ? "bad" : ""}`}>{myResult.net > 0 ? `+${fmt(myResult.net)} chips` : myResult.net < 0 ? `−${fmt(-myResult.net)} chips` : "Push — bet returned"}</div>}
     </div>
   );

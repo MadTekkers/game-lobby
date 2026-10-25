@@ -220,3 +220,12 @@
 .learn .rk li { border-bottom: 1px solid #e3e5e8; padding-bottom: 4px; } .learn .rk-h { display: flex; justify-content: space-between; gap: 6px; align-items: baseline; }
 .learn .rk-c { display: flex; gap: 2px; margin: 3px 0; } .learn .rk-c .pc.sm { width: 24px; height: 34px; }
 .learn .tiny, .tally .tiny { color: #3d4147; }
+
+/* action tray above your hand (you're always at bottom centre) */
+.bj-acts.above { position: absolute; bottom: calc(100% + 10px); left: 50%; top: auto; translate: -50% 0; width: 150px; gap: 4px; padding: 4px; background: rgba(8,28,18,.92); border-radius: 12px; box-shadow: 0 0 0 2px #f9df6d, 0 4px 12px rgba(0,0,0,.4); }
+.bj-acts.above::after { content: ""; position: absolute; left: 50%; top: 100%; translate: -50% 0; border: 7px solid transparent; border-top-color: #f9df6d; }
+.bj-acts.above .act { flex: 1 1 calc(50% - 4px); min-width: 0; padding: 7px 4px; font-size: 13px; }
+.bj-acts.above .act.hint { flex: 0 0 auto; padding: 8px 10px; }
+.bj-acts.above.ins { width: 200px; } .bj-acts.above.ins .act { flex-basis: 100%; }
+@media (min-width: 700px) { .bj-acts.above { width: 210px; gap: 5px; padding: 5px; } .bj-acts.above .act { font-size: 14px; padding: 8px 4px; } .bj-acts.above.ins { width: 230px; } }
+.bjs.mine { z-index: 6; }
