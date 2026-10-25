@@ -18,7 +18,7 @@ const METRIC = {
   holdem: () => ({ b: document.querySelectorAll(".pk-board .pc.up").length, turn: [...document.querySelectorAll(".pks")].findIndex((x) => x.classList.contains("turn")), lasts: [...document.querySelectorAll(".pks")].map((x) => x.querySelector(".pk-last, .last")?.textContent || "").join("|") }),
 };
 METRIC.hearts = METRIC.spades;
-const inputsDisabled = () => { const b = [...document.querySelectorAll(".bj-acts button, .bet-box .controls button, .pk-actions button, .fan-c, .bidpad button")]; return b.length ? (b.every((x) => x.disabled) || b.filter((x) => !x.disabled).map((x) => x.textContent.trim().slice(0, 12)).join(",")) : null; };
+const inputsDisabled = () => { if (!document.querySelector(".replay-bar.on")) return null; const b = [...document.querySelectorAll(".bj-acts button, .bet-box .controls button, .pk-actions button, .fan-c, .bidpad button")]; return b.length ? (b.every((x) => x.disabled) || b.filter((x) => !x.disabled).map((x) => x.textContent.trim().slice(0, 12)).join(",")) : null; };
 
 async function move(p, game) {
   if (game === "blackjack") {
