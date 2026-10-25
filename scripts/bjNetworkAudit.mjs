@@ -54,6 +54,9 @@ for (const X of [A, Bo]) {
     walk(j);
     for (const pb of pubs) {
       rounds.add(pb.round);
+      // replay frames include the dealer's own turn (every hand finished, hole flipped): the hole is public by then
+      const dealerTurn = pb.phase === "play" && pb.turn === null && pb.holeHidden === false;
+      if (dealerTurn) { if (pb.seats.some((x) => x.inRound && x.hands.some((h) => !h.done))) report.violations.push(`${X.name}: hole shown while a hand is still open (round ${pb.round})`); report.dealerTurnFrames = (report.dealerTurnFrames || 0) + 1; continue; }
       if ((pb.phase === "play" || pb.phase === "insurance") && pb.dealer.length) { if (pb.dealer[1] !== null) report.violations.push(`${X.name}: hole card visible during ${pb.phase} round ${pb.round}: ${pb.dealer[1]}`); else hidden++; }
       if (pb.phase === "betting" && pb.dealer.length >= 2 && pb.dealer[1]) revealed++;
     }
