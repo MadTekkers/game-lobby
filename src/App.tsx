@@ -21,6 +21,7 @@ import Lobby, { Avatar } from "./Lobby";
 import { gameUrl, GAME_META, optsLabel, findByCode, isActive, useOpenLobbies, useSitePresence, type GameId } from "./lib/lobby";
 import { getStreak, knownPeers, recentRooms } from "./lib/fx";
 const DeepDivePage = lazy(() => import("./games/deepdive/DeepDive"));
+const DrillsPage = lazy(() => import("./cards/coach/DrillsPage"));
 
 const GAMES: { id: GameId; desc: string; color: string; icon: string; team?: boolean; play?: string; solo?: boolean }[] = [
   { id: "wordle", desc: "Guess the hidden word in 6 tries.", color: "#6aaa64", icon: "🟩" },
@@ -105,6 +106,7 @@ export default function App() {
     if (path === "/holdem") return <HoldemPage key={k} params={params} />;
     if (path === "/mahjong") return <MahjongPage key={k} params={params} />;
     if (path === "/deepdive") return <Suspense fallback={<p className="muted" style={{ padding: 24 }}>Loading…</p>}><DeepDivePage key={k} params={params} /></Suspense>;
+    if (path === "/drills") return <Suspense fallback={<p className="muted" style={{ padding: 24 }}>Loading…</p>}><DrillsPage key={k} params={params} /></Suspense>;
     if (path === "/archive") return <Archive key={k} />;
     if (path === "/history") return <History key={k} params={params} />;
     return <Home />;

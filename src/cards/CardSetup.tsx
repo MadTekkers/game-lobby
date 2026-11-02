@@ -5,6 +5,9 @@ import { ensurePlayer } from "../lib/player";
 import { rememberRoom } from "../lib/fx";
 import "./cards.css";
 import { TrainerStages } from "./mahjong/stages";
+import { CoachLevelPicker, DrillsLink } from "./coach/CoachUI";
+import type { CoachGame } from "./coach/level";
+const COACHED = ["blackjack", "spades", "hearts", "holdem"];
 
 type Cfg = { seats: number[]; def: number; seatLabel?: (n: number) => string; seatNote: string; bots: Record<string, string>; train: string; tutorial: string };
 const CFG: Record<string, Cfg> = {
@@ -73,6 +76,11 @@ export default function CardSetup({ game }: { game: GameId }) {
       {tut ? <p className="small">Tutorial tables are just you and bots, with every card shown. Chips still move, but tutorial games don't count on the leaderboard.</p> :
       <label className="name-row"><span><input type="checkbox" checked={train} onChange={(e) => setTrain(e.target.checked)} /> <b>Train mode</b> — {cfg.train}</span></label>}
       <p className="muted small">The 💡 Hint button (the same simulation) is always available.</p>
+      {COACHED.includes(game) && (<>
+        <h3 className="small" style={{ margin: "14px 0 6px" }}>Coach level <span className="muted">— how much the coach helps while you play (you can change it at the table too)</span></h3>
+        <CoachLevelPicker game={game as CoachGame} mode={mode === "live" ? "live" : "solo"} inline />
+        <p className="small" style={{ marginTop: 10 }}><DrillsLink game={game as CoachGame} /> <span className="muted">Replay the spots you got wrong until they stick.</span></p>
+      </>)}
       {mode === "live" && (<>
         <h2 className="section">Lobby</h2>
         <div className="name-row"><label>Table name <input value={name} placeholder="optional" maxLength={40} onChange={(e) => setName(e.target.value)} /></label>

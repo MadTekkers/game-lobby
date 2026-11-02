@@ -86,3 +86,15 @@ Trainer (setup page `/play/mahjong`): 1 **Tile School** (`?school=tiles`), 2 **D
 5 **Real game**. Learn/term cards, a rules quiz and the faan table sit in the side panel (bottom sheet on phones). Rules, scoring and
 strategy: `docs/strategy/mahjong.md`. Scripts: `scripts/mahjongSmoke.mjs` (API game + leak check), `scripts/mahjongUiSmoke.mjs`
 (browser game), `scripts/mahjongNetworkAudit.mjs` (two-browser leak audit).
+
+## Card coach: levels, hand review, mistake drills
+
+Blackjack, Spades, Hearts and Hold'em share one coach layer (`src/cards/coach/`). Each game's adapter is in `src/cards/<game>/review.ts`. The adapters reuse the existing Monte-Carlo coach evaluators.
+
+- **Coach level** is a per-game setting saved on the device (`coach_level_<game>`). Change it with the "🎓 Coach" pill under the table, or on the game's setup screen.
+  - **Guided** is the default. A "Coach suggests" hint appears before every decision.
+  - **Catch mistakes** stays quiet until you pick something the coach wouldn't. In solo, Train and tutorial play, the move is checked *before* it's sent, so you can try again. At live tables the move is sent as normal and the coach explains afterwards. Moves are never undone on the server.
+  - **Off** shows no hints, but your decisions are still recorded for reviews and drills.
+- **Hand review**: after each Blackjack or Hold'em hand, or each Spades or Hearts round, "🔍 Review hand" opens a step-by-step sheet. Each step shows the situation, your move, the coach's move and why, plus an A–D grade. It covers only your own decisions and shows only cards you could already see.
+- **Mistake drills** (`#/drills?game=<game>`): every decision that differed from the coach is saved on the device (`coach_drills_<game>`, last 80 spots) and comes back as a one-question quiz. Two right answers in a row retire a spot. A miss brings it back later in the same session. A right answer pushes it back 4 hours. The badge on "🎯 Mistake drills" counts the spots that are due.
+- Tests: `src/cards/coach/record.test.ts` (recording, classification, scheduling, grading, Blackjack adapter) and `src/cards/coach/level.test.ts` (defaults, saving, level × table-mode gating).
