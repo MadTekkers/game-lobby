@@ -2,7 +2,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { go } from "../../lib/router";
 import { ensurePlayer } from "../../lib/player";
-import { beep, bumpStreak, confetti, soundOn, setSound } from "../../lib/fx";
+import { bumpStreak, confetti, soundOn, setSound } from "../../lib/fx";
+import { beep, warmAudio } from "./sfx";
 import "../../cards/cards.css";
 import "../../cards/table.css";
 import "./deepdive.css";
@@ -10,7 +11,8 @@ import type { Answer, Bank, CatId, Prompt } from "./types";
 import { matchAnswer } from "./match";
 import { CAT_COLOR, CAT_ICON, chicagoDate, dailySet, fmtM, loadBank, metres, pickSet, rarerPicks } from "./data";
 import { dailyDone, dueItems, load, logAttempt, logDive, queuedItems, srsMiss, srsPass, streaks, type Attempt } from "./store";
-import { DepthMeter, FeedbackCard, FlipCard, LearnCards, MAX_DEPTH, Panel, RarityBar, Ring, Walkthrough } from "./ui";
+import { Countdown, DepthMeter, FeedbackCard, FlipCard, LearnCards, MAX_DEPTH, Panel, RarityBar, SecondsLeft, Walkthrough } from "./ui";
+import { animOn, CountUp, setAnim, useAnim } from "./motion";
 
 const PREVIEW_MS = 3000, ANSWER_MS = 25000, SLOW_MS = 15000;
 type View = "home" | "study" | "drill" | "dive" | "progress";
@@ -21,15 +23,18 @@ export default function DeepDivePage({ params }: { params: URLSearchParams }) {
   const [err, setErr] = useState<string | null>(null);
   const [intro, setIntro] = useState(() => localStorage.getItem(INTRO_KEY) !== "1");
   const [snd, setSnd] = useState(soundOn());
+  const anim = useAnim();
   useEffect(() => { ensurePlayer(); loadBank().then(setBank, (e) => setErr(String(e))); }, []);
   const closeIntro = useCallback(() => { localStorage.setItem(INTRO_KEY, "1"); setIntro(false); }, []);
   const view = (params.get("v") || "home") as View;
   return (
-    <div className={`dd dd-v-${view}`}>
+    <div className={`dd dd-v-${view} ${anim ? "dd-anim" : "dd-still"}`} onPointerDownCapture={warmAudio} onKeyDownCapture={warmAudio}>
       <header className="game-header dd-header">
         <button className="back" onClick={() => go(view === "home" ? "/" : "/deepdive")} aria-label={view === "home" ? "Back to lobby" : "Back to Deep Dive home"}>‹ {view === "home" ? "Lobby" : "Deep Dive"}</button>
         <h1>🤿 Deep Dive</h1>
         <button className="icon-btn" title="Sound" aria-label={snd ? "Mute sound" : "Unmute sound"} onClick={() => { setSound(!snd); setSnd(!snd); }}>{snd ? "🔊" : "🔇"}</button>
+        <button className="pill ghost sm dd-anim-btn" aria-pressed={anim} onClick={() => setAnim(!anim)} title="Turn animations on or off"
+          aria-label={`Animations ${anim ? "on" : "off"}`}><span aria-hidden>{anim ? "✨" : "⏸"}</span> <span className="long">Animations </span>{anim ? "On" : "Off"}</button>
         <button className="pill ghost sm dd-hiw" onClick={() => setIntro(true)} aria-label="How it works"><span className="long">How it works</span><span className="short" aria-hidden>?</span></button>
       </header>
       {err && <p className="dd-err">Couldn't load the question bank. Check your connection and reload.</p>}
@@ -155,10 +160,13 @@ function StudyList({ prompt, bank }: { prompt: Prompt; bank: Bank }) {
 }
 
 /* ---------------- shared timer hook ---------------- */
-function useNow(active: boolean) {
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => { if (!active) return; const t = setInterval(() => setNow(Date.now()), 100); return () => clearInterval(t); }, [active]);
-  return now;
+/** Calls `fn` once when `ms` have passed since `start` (no per-tick re-renders; the clock UI updates itself). */
+function useDeadline(active: boolean, start: number, ms: number, fn: () => void) {
+  useEffect(() => {
+    if (!active) return;
+    const t = setTimeout(fn, Math.max(0, ms - (Date.now() - start)));
+    return () => clearTimeout(t);
+  }, [active, start, ms, fn]);
 }
 
 /* ---------------- drills ---------------- */
@@ -203,15 +211,13 @@ function NameAll({ prompt, seconds, onExit, onNext }: { prompt: Prompt; seconds:
   const [msg, setMsg] = useState("");
   const [over, setOver] = useState(false);
   const [start] = useState(Date.now());
-  const now = useNow(!over && seconds > 0);
-  const left = seconds ? Math.max(0, seconds - (now - start) / 1000) : 0;
   const finish = useCallback(() => {
     setOver(true);
     const pct = found.length / prompt.answers.length;
     logAttempt({ at: Date.now(), pid: prompt.id, cat: prompt.cat, ok: pct >= 0.5, pts: Math.round(pct * 100), ms: Date.now() - start, src: "drill" });
     if (pct < 0.5) srsMiss(prompt.id, prompt.answers.filter((a) => !found.includes(a.t)).slice(-3).map((a) => a.t));
   }, [found, prompt, start]);
-  useEffect(() => { if (seconds && left <= 0 && !over) finish(); }, [left, seconds, over, finish]);
+  useDeadline(seconds > 0 && !over, start, seconds * 1000, finish);
   const submit = () => {
     const r = matchAnswer(prompt, guess);
     if (r.kind === "hit") {
@@ -225,7 +231,7 @@ function NameAll({ prompt, seconds, onExit, onNext }: { prompt: Prompt; seconds:
   const total = prompt.answers.reduce((s, a) => s + a.p, 0);
   return (
     <div className="dd-page">
-      <div className="dd-row wrap"><button className="pill ghost sm" onClick={onExit}>‹ Drills</button>{seconds > 0 && !over && <Ring left={left} total={seconds} />}<span className="dd-score">{found.length}/{prompt.answers.length} · {pts} pts</span></div>
+      <div className="dd-row wrap"><button className="pill ghost sm" onClick={onExit}>‹ Drills</button>{seconds > 0 && !over && <Countdown start={start} totalMs={seconds * 1000} />}<span className="dd-score">{found.length}/{prompt.answers.length} · {pts} pts</span></div>
       <h2 className="dd-h2">{prompt.q}</h2>
       {prompt.note && <p className="muted small">{prompt.note}</p>}
       {!over ? (
@@ -253,15 +259,14 @@ function RareHunt({ prompt, seconds, minPts, onExit, onNext }: { prompt: Prompt;
   const [win, setWin] = useState<Answer | null>(null);
   const [over, setOver] = useState(false);
   const [start] = useState(Date.now());
-  const now = useNow(!over && seconds > 0);
-  const left = seconds ? Math.max(0, seconds - (now - start) / 1000) : 0;
   const eligible = prompt.answers.filter((a) => a.p >= minPts).length;
   const end = useCallback((w: Answer | null) => {
     setWin(w); setOver(true);
     logAttempt({ at: Date.now(), pid: prompt.id, cat: prompt.cat, ok: !!w, pts: w?.p ?? 0, ms: Date.now() - start, src: "drill" });
     if (!w) srsMiss(prompt.id, rarerPicks(prompt, null).map((a) => a.t));
   }, [prompt, start]);
-  useEffect(() => { if (seconds && left <= 0 && !over) end(null); }, [left, seconds, over, end]);
+  const timeUp = useCallback(() => end(null), [end]);
+  useDeadline(seconds > 0 && !over, start, seconds * 1000, timeUp);
   const submit = () => {
     const r = matchAnswer(prompt, guess);
     if (r.kind === "hit") {
@@ -273,7 +278,7 @@ function RareHunt({ prompt, seconds, minPts, onExit, onNext }: { prompt: Prompt;
   };
   return (
     <div className="dd-page">
-      <div className="dd-row wrap"><button className="pill ghost sm" onClick={onExit}>‹ Drills</button>{seconds > 0 && !over && <Ring left={left} total={seconds} />}<span className="dd-score">Target ≥ {minPts} pts · {eligible} qualify</span></div>
+      <div className="dd-row wrap"><button className="pill ghost sm" onClick={onExit}>‹ Drills</button>{seconds > 0 && !over && <Countdown start={start} totalMs={seconds * 1000} />}<span className="dd-score">Target ≥ {minPts} pts · {eligible} qualify</span></div>
       <h2 className="dd-h2">{prompt.q}</h2>
       {prompt.note && <p className="muted small">{prompt.note}</p>}
       {!over ? (
@@ -309,13 +314,14 @@ function Dive({ bank, kind }: { bank: Bank; kind: DiveKind }) {
     else if (kind === "review") { const due = dueItems().map((x) => bank.prompts.find((p) => p.id === x.pid)).filter(Boolean) as Prompt[]; setQueue(due.slice(0, 7)); setSource(`${due.length} due`); }
     else setQueue(pickSet(bank, `endless:${Date.now()}`, 7));
   }, [bank, kind]);
+  const anim = useAnim();
   const prompt = queue?.[i] ?? null;
   const misses = results.filter((r) => !r.answer).length;
   const depth = results.reduce((s, r) => s + metres(r.answer?.p ?? 0), 0);
   const total = kind === "endless" ? null : queue?.length ?? 0;
-  const now = useNow(phase === "preview" || phase === "answer");
   const begin = () => { setPhase("preview"); setT0(Date.now()); setMsg(""); setGuess(""); lastTry.current = ""; };
-  useEffect(() => { if (phase === "preview" && now - t0 >= PREVIEW_MS) { setPhase("answer"); setT0(Date.now()); setTimeout(() => inputRef.current?.focus(), 30); } }, [phase, now, t0]);
+  const toAnswer = useCallback(() => { setPhase("answer"); setT0(Date.now()); setTimeout(() => inputRef.current?.focus(), 30); }, []);
+  useDeadline(phase === "preview", t0, PREVIEW_MS, toAnswer);
   const record = useCallback((answer: Answer | null, ms: number) => {
     if (!prompt) return;
     const r: Result = { prompt, answer, ms, last: lastTry.current };
@@ -326,7 +332,8 @@ function Dive({ bank, kind }: { bank: Bank; kind: DiveKind }) {
     if (kind === "review" && !slow) srsPass(prompt.id); else if (slow) srsMiss(prompt.id, rarerPicks(prompt, answer).map((a) => a.t));
     if (answer) beep(answer.p >= 70 ? "win" : "good"); else beep("bad");
   }, [prompt, kind]);
-  useEffect(() => { if (phase === "answer" && now - t0 >= ANSWER_MS) record(null, ANSWER_MS); }, [phase, now, t0, record]);
+  const timeUp = useCallback(() => record(null, ANSWER_MS), [record]);
+  useDeadline(phase === "answer", t0, ANSWER_MS, timeUp);
   const submit = () => {
     if (!prompt || phase !== "answer" || !guess.trim()) return;
     lastTry.current = guess.trim();
@@ -339,7 +346,7 @@ function Dive({ bank, kind }: { bank: Bank; kind: DiveKind }) {
     const d = rs.reduce((s, r) => s + metres(r.answer?.p ?? 0), 0);
     logDive({ at: Date.now(), kind, day: kind === "daily" ? day : undefined, depth: d, n: rs.length, hits: rs.filter((r) => r.answer).length });
     bumpStreak("deepdive");
-    if (d >= 3500) confetti();
+    if (d >= 3500 && animOn()) confetti();
   };
   const next = () => {
     if (!queue) return;
@@ -365,7 +372,6 @@ function Dive({ bank, kind }: { bank: Bank; kind: DiveKind }) {
   if (kind === "review" && queue.length === 0) return (
     <div className="dd-page"><h2 className="dd-h2">🔁 Review</h2><p>Nothing is due right now. {queuedItems().length ? `${queuedItems().length} prompt(s) are scheduled for later.` : "Missed or slow answers will show up here."}</p><button className="pill" onClick={() => go("/deepdive")}>Back to Deep Dive</button></div>
   );
-  const elapsed = now - t0;
   const title = kind === "daily" ? "🌊 Daily Dive" : kind === "review" ? "🔁 Review dive" : "♾️ Endless";
   return (
     <div className="dd-play">
@@ -375,7 +381,7 @@ function Dive({ bank, kind }: { bank: Bank; kind: DiveKind }) {
           <div className="dd-row dd-status">
             <b>{title}</b>
             <span className="dd-pill">{kind === "endless" ? `Prompt ${i + 1} · ${"❤️".repeat(Math.max(0, 3 - misses))}${"🖤".repeat(Math.min(3, misses))}` : `Prompt ${Math.min(i + 1, total || 1)} of ${total}`}</span>
-            <span className="dd-pill">{fmtM(depth)}</span>
+            <CountUp className="dd-pill" value={depth} format={fmtM} />
             {source && <span className="dd-pill subtle">{source}</span>}
           </div>
           {phase === "ready" && (
@@ -390,8 +396,8 @@ function Dive({ bank, kind }: { bank: Bank; kind: DiveKind }) {
             <div className="dd-card dd-preview pop-in" key={`pv${i}`}>
               <span className="dd-cat" style={{ background: CAT_COLOR[prompt.cat] }}>{CAT_ICON[prompt.cat]} {bank.categories.find((c) => c.id === prompt.cat)?.name}</span>
               <h2 className="dd-prompt">{prompt.q}</h2>
-              <div className="dd-get-ready"><i style={{ animationDuration: `${PREVIEW_MS}ms` }} /></div>
-              <p className="muted small">Get ready… {Math.max(1, Math.ceil((PREVIEW_MS - elapsed) / 1000))}</p>
+              {anim && <div className="dd-get-ready"><i style={{ animationDuration: `${PREVIEW_MS}ms` }} /></div>}
+              <p className="muted small">Get ready… <SecondsLeft start={t0} totalMs={PREVIEW_MS} /></p>
             </div>
           )}
           {prompt && phase === "answer" && (
@@ -399,7 +405,7 @@ function Dive({ bank, kind }: { bank: Bank; kind: DiveKind }) {
               <div className="dd-row dd-qrow">
                 <div><span className="dd-cat" style={{ background: CAT_COLOR[prompt.cat] }}>{CAT_ICON[prompt.cat]} {bank.categories.find((c) => c.id === prompt.cat)?.name}</span>
                   <h2 className="dd-prompt">{prompt.q}</h2>{prompt.note && <p className="muted small">{prompt.note}</p>}</div>
-                <Ring left={(ANSWER_MS - elapsed) / 1000} total={ANSWER_MS / 1000} />
+                <Countdown start={t0} totalMs={ANSWER_MS} />
               </div>
               <form className={`dd-answer-form ${shake ? "shake" : ""}`} key={shake} onSubmit={(e) => { e.preventDefault(); submit(); }}>
                 <input ref={inputRef} value={guess} onChange={(e) => setGuess(e.target.value)} placeholder="Type one answer…" aria-label="Your answer" autoComplete="off" autoCapitalize="off" spellCheck={false} autoFocus enterKeyHint="go" />
@@ -437,7 +443,7 @@ function DiveSummary({ results, kind, depth }: { results: Result[]; kind: DiveKi
   const verdict = pts >= 450 ? "Abyssal — elite rarity instincts." : pts >= 300 ? "Deep water. You're skipping the obvious answers." : pts >= 150 ? "Twilight zone. Push one answer deeper next time." : "Shallow so far — Study and Drills will help.";
   return (
     <div className="dd-card dd-summary pop-in">
-      <div className="dd-sum-depth"><span>🤿</span><b>{fmtM(depth)}</b><span className="muted">{pts} pts · {hits}/{results.length} answered</span></div>
+      <div className="dd-sum-depth"><span>🤿</span><b><CountUp value={depth} format={fmtM} from={0} ms={1400} /></b><span className="muted">{pts} pts · {hits}/{results.length} answered</span></div>
       <p><b>{verdict}</b></p>
       <DiveLog results={results} />
       <div className="dd-row wrap">

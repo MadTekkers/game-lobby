@@ -1,4 +1,5 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { CountUp, useAnim } from "./motion";
 import type { Answer, Prompt } from "./types";
 import { fmtM, metres, rarerPicks, tier, TIER_LABEL } from "./data";
 
@@ -7,37 +8,75 @@ export const MAX_DEPTH = 7000;
 export function RarityBar({ p, label = true }: { p: number; label?: boolean }) {
   return (
     <span className={`dd-rbar t-${tier(p)}`} role="img" aria-label={`Rarity ${p} of 100 points (${TIER_LABEL[tier(p)]})`} title={TIER_LABEL[tier(p)]}>
-      <span className="trk"><i style={{ width: `${p}%` }} /></span>{label && <b>{p}</b>}
+      <span className="trk"><i style={{ "--f": p / 100 } as CSSProperties} /></span>{label && <b>{p}</b>}
     </span>
   );
 }
 
-/** 25-second countdown ring. */
-export function Ring({ left, total, label }: { left: number; total: number; label?: string }) {
-  const r = 26, c = 2 * Math.PI * r, f = Math.max(0, Math.min(1, left / total));
-  const low = left <= 5;
+/** Countdown from `start` (epoch ms) over `totalMs`. Animations on: an SVG ring driven by ONE linear CSS animation over
+ *  the whole duration (negative delay resumes mid-way). Off: a plain number + bar that steps once per second.
+ *  Either way the seconds text is written straight to the DOM — the parent never re-renders while the clock runs. */
+export function Countdown({ start, totalMs }: { start: number; totalMs: number }) {
+  const anim = useAnim();
+  const root = useRef<HTMLDivElement>(null), num = useRef<HTMLSpanElement>(null), bar = useRef<HTMLElement>(null);
+  useEffect(() => {
+    let t = 0;
+    const tick = () => {
+      const left = Math.max(0, totalMs - (Date.now() - start)), s = Math.ceil(left / 1000);
+      if (num.current) num.current.textContent = String(s);
+      root.current?.classList.toggle("low", s <= 5);
+      root.current?.setAttribute("aria-label", `${s} seconds left`);
+      if (bar.current) bar.current.style.transform = `scaleX(${s / (totalMs / 1000)})`;
+      if (left > 0) t = window.setTimeout(tick, (left % 1000) || 1000); // wake exactly at each second boundary
+    };
+    tick();
+    return () => clearTimeout(t);
+  }, [start, totalMs, anim]);
+  const r = 26, c = 2 * Math.PI * r;
+  if (!anim) return (
+    <div ref={root} className="dd-clock" role="timer">
+      <span ref={num} className="dd-clock-n" /><span className="dd-clock-u">s</span>
+      <span className="dd-clock-bar"><i ref={bar} /></span>
+    </div>
+  );
   return (
-    <div className={`dd-ring ${low ? "low" : ""}`} role="timer" aria-label={`${Math.ceil(left)} seconds left`}>
+    <div ref={root} className="dd-ring" role="timer">
       <svg viewBox="0 0 64 64" width="64" height="64" aria-hidden>
         <circle cx="32" cy="32" r={r} className="track" />
-        <circle cx="32" cy="32" r={r} className="arc" strokeDasharray={c} strokeDashoffset={c * (1 - f)} transform="rotate(-90 32 32)" />
+        <circle cx="32" cy="32" r={r} className="arc" strokeDasharray={c} transform="rotate(-90 32 32)"
+          style={{ "--c": `${c}px`, animationDuration: `${totalMs}ms`, animationDelay: `${-(Date.now() - start)}ms` } as CSSProperties} />
       </svg>
-      <span>{label ?? Math.ceil(left)}</span>
+      <span ref={num} />
     </div>
   );
 }
 
+/** Seconds-left text only (preview "Get ready… 3"). */
+export function SecondsLeft({ start, totalMs }: { start: number; totalMs: number }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    let t = 0;
+    const tick = () => { const left = Math.max(0, totalMs - (Date.now() - start)); if (ref.current) ref.current.textContent = String(Math.max(1, Math.ceil(left / 1000))); if (left > 0) t = window.setTimeout(tick, (left % 1000) || 1000); };
+    tick(); return () => clearTimeout(t);
+  }, [start, totalMs]);
+  return <span ref={ref} />;
+}
+
 /** Vertical depth gauge with a diver that sinks as points add up (1 point = 10 m). */
 export function DepthMeter({ depth, compact }: { depth: number; compact?: boolean }) {
-  const f = Math.min(1, depth / MAX_DEPTH);
+  const anim = useAnim();
+  const f = anim ? Math.min(1, depth / MAX_DEPTH) : 0; // animations off: the diver stays put, only the number changes
   return (
     <div className={`dd-meter ${compact ? "compact" : ""}`} aria-label={`Depth ${fmtM(depth)} of ${fmtM(MAX_DEPTH)}`} role="img">
       <div className="dd-water" />
       {[0, 1000, 2000, 3000, 4000, 5000, 6000, 7000].map((m) => (
         <span key={m} className="dd-tick" style={{ top: `${(m / MAX_DEPTH) * 100}%` }}>{compact ? "" : m === 0 ? "0" : `${m / 1000}k`}</span>
       ))}
-      <span className="dd-diver" style={{ top: `calc(22px + ${f} * (100% - 60px))` }} aria-hidden><span className="dd-bubbles"><i /><i /><i /></span>🤿</span>
-      <b className="dd-depth-num">{fmtM(depth)}</b>
+      {/* The rail spans the travel range; moving it by translate3d(0, f*100%) puts the diver at depth f. Compositor-only. */}
+      <span className="dd-rail" style={{ transform: `translate3d(0, ${f * 100}%, 0)` }} aria-hidden>
+        <span className="dd-diver"><span className="dd-bob"><span className="dd-bubbles"><i /><i /><i /></span><span className="dd-mask">🤿</span></span></span>
+      </span>
+      <b className="dd-depth-num"><CountUp value={depth} format={fmtM} /></b>
     </div>
   );
 }
@@ -63,7 +102,7 @@ export function FeedbackCard({ prompt, mine, typed, ms, onNext, nextLabel = "Nex
   const max = prompt.answers.length ? Math.max(...prompt.answers.map((a) => a.p)) : 100;
   return (
     <div className="coach dd-feedback pop-in" role="region" aria-label="Answer feedback">
-      <div className="coach-h"><b>🎓 {mine ? `+${mine.p} pts · ${fmtM(metres(mine.p))} deeper` : "No answer in time"}</b>{ms != null && <span className="muted tiny">{(ms / 1000).toFixed(1)} s</span>}</div>
+      <div className="coach-h"><b>🎓 {mine ? <>+<CountUp value={mine.p} from={0} /> pts · <CountUp value={metres(mine.p)} format={fmtM} from={0} /> deeper</> : "No answer in time"}</b>{ms != null && <span className="muted tiny">{(ms / 1000).toFixed(1)} s</span>}</div>
       <p className={`coach-gap ${mine && mine.p >= 70 ? "ok" : "warn"}`}>
         {mine ? (mine.p >= 85 ? `Superb — “${mine.t}” is one of the rarest answers.` : picks.length ? `“${mine.t}” works. Rarer answers that would have scored more:` : `“${mine.t}” is the rarest answer on the list!`)
           : `Nothing accepted${typed ? ` (last try: “${typed}”)` : ""}. Answers worth remembering:`}
@@ -73,7 +112,7 @@ export function FeedbackCard({ prompt, mine, typed, ms, onNext, nextLabel = "Nex
           <div className="coach-top">
             <span className="coach-name">{!me && a.p === max && <span className="star" title="Rarest answer">★</span>}{a.t}{me && <em> you</em>}</span>
             <span className="coach-ev">{a.p} pts</span>
-            <span className="coach-bar"><i className={a.p >= 70 ? "good" : a.p >= 40 ? "mid" : "bad"} style={{ width: `${a.p}%` }} /></span>
+            <span className="coach-bar"><i className={a.p >= 70 ? "good" : a.p >= 40 ? "mid" : "bad"} style={{ "--f": a.p / 100 } as CSSProperties} /></span>
             {a.tip && <span className="coach-why">💡 {a.tip}</span>}
           </div>
         </div>

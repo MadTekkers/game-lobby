@@ -34,8 +34,14 @@
 .dd-meter { position: relative; width: 74px; min-height: 200px; border-radius: 12px; overflow: hidden; background: linear-gradient(180deg, #8fd3ee 0%, #2a7bb8 25%, #0d3f74 55%, #061a36 85%, #02070f 100%); flex: none; }
 .dd-meter.compact { width: 74px; }
 .dd-tick { position: absolute; left: 0; right: 0; border-top: 1px dashed rgba(255,255,255,.35); font-size: 10px; color: #fff; padding-left: 3px; line-height: 1.1; }
-.dd-diver { position: absolute; left: 50%; font-size: 30px; transform: translate(-50%, -50%) scaleX(-1); transition: top 1.2s cubic-bezier(.3,.7,.3,1); filter: drop-shadow(0 2px 3px rgba(0,0,0,.45)); animation: dd-bob 2.4s ease-in-out infinite; }
-@keyframes dd-bob { 50% { margin-top: -4px; } }
+/* The rail covers the diver's travel range (22px from the top to 38px above the bottom). Moving the rail with
+   translate3d(0, f*100%) puts the diver at depth f; only transform animates, so it stays on the compositor. */
+.dd-rail { position: absolute; left: 0; right: 0; top: 22px; height: calc(100% - 60px); pointer-events: none; will-change: transform;
+  transition: transform 850ms cubic-bezier(.22, 1, .36, 1); }
+.dd-diver { position: absolute; left: 50%; top: 0; font-size: 30px; transform: translate3d(-50%, -50%, 0); }
+.dd-bob { display: block; animation: dd-bob 2.6s ease-in-out infinite; will-change: transform; }
+.dd-mask { display: block; transform: scaleX(-1); filter: drop-shadow(0 2px 3px rgba(0,0,0,.45)); }
+@keyframes dd-bob { 0%, 100% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(0, -4px, 0); } }
 .dd-bubbles { position: absolute; left: 18px; top: -6px; } .dd-bubbles i { position: absolute; width: 6px; height: 6px; border: 1.5px solid rgba(255,255,255,.85); border-radius: 50%; animation: dd-bub 2.2s linear infinite; opacity: 0; }
 .dd-bubbles i:nth-child(2) { animation-delay: .7s; left: 6px; } .dd-bubbles i:nth-child(3) { animation-delay: 1.4s; left: -4px; }
 @keyframes dd-bub { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-46px); opacity: 0; } }
@@ -44,8 +50,11 @@
 /* play */
 .dd-play { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 8px; }
 @media (min-width: 960px) { .dd-play { grid-template-columns: minmax(0, 1fr) 360px; align-items: start; } }
-.dd-ocean { --deep: 0; display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 12px; padding: 12px; border-radius: 18px; min-height: 460px;
-  background: linear-gradient(180deg, color-mix(in srgb, #d6f0fa calc((1 - var(--deep)) * 100%), #0a2a4f), color-mix(in srgb, #7cc3e6 calc((1 - var(--deep)) * 100%), #020a18)); transition: background 1.2s; }
+/* Gradients can't be transitioned (they snap), so the dark water is a second layer whose opacity fades. */
+.dd-ocean { --deep: 0; position: relative; isolation: isolate; display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 12px; padding: 12px; border-radius: 18px; min-height: 460px;
+  background: linear-gradient(180deg, #d6f0fa, #7cc3e6); }
+.dd-ocean::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: linear-gradient(180deg, #0a2a4f, #020a18);
+  opacity: var(--deep); transition: opacity 900ms ease-out; will-change: opacity; }
 .dd-ocean .dd-meter { min-height: 430px; }
 @media (max-width: 520px) { .dd-ocean { grid-template-columns: 52px minmax(0, 1fr); gap: 8px; padding: 8px; } .dd-ocean .dd-meter { width: 52px; } .dd-ocean .dd-tick { font-size: 9px; } .dd-diver { font-size: 24px; } }
 .dd-stage { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
@@ -60,8 +69,8 @@
 .dd-cat { display: inline-block; color: #fff; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 700; }
 .dd-preview { text-align: center; padding: 28px 16px; } .dd-preview .dd-prompt { font-size: 30px; }
 .dd-get-ready { height: 6px; background: #e3e9ef; border-radius: 3px; overflow: hidden; margin: 14px auto 4px; max-width: 320px; }
-.dd-get-ready i { display: block; height: 100%; background: var(--dd-acc); animation: dd-fill linear both; }
-@keyframes dd-fill { from { width: 0; } to { width: 100%; } }
+.dd-get-ready i { display: block; height: 100%; background: var(--dd-acc); transform-origin: left; animation: dd-fill linear both; }
+@keyframes dd-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 .dd-qrow { justify-content: space-between; align-items: flex-start; }
 .dd-answer-form { display: flex; gap: 8px; margin-top: 8px; }
 .dd-answer-form input, .dd-quizbar input { flex: 1; min-width: 0; font-size: 18px; padding: 10px 12px; border: 2px solid #8b96a3; border-radius: 10px; color: var(--dd-ink); }
@@ -78,15 +87,24 @@
 
 /* countdown ring */
 .dd-ring { position: relative; width: 64px; height: 64px; flex: none; }
-.dd-ring svg circle { fill: none; stroke-width: 6; } .dd-ring .track { stroke: #e3e9ef; } .dd-ring .arc { stroke: var(--dd-acc); stroke-linecap: round; transition: stroke-dashoffset .1s linear, stroke .3s; }
+.dd-ring svg circle { fill: none; stroke-width: 6; } .dd-ring .track { stroke: #e3e9ef; } .dd-ring .arc { stroke: var(--dd-acc); stroke-linecap: round; transition: stroke .4s; stroke-dashoffset: 0; animation: dd-ring linear forwards; }
+@keyframes dd-ring { to { stroke-dashoffset: var(--c); } }
 .dd-ring span { position: absolute; inset: 0; display: grid; place-items: center; font-weight: 800; font-size: 20px; font-variant-numeric: tabular-nums; }
 .dd-ring.low .arc { stroke: #c0392b; } .dd-ring.low span { color: #a12a1e; animation: dd-throb .5s ease-in-out infinite alternate; }
 @keyframes dd-throb { to { transform: scale(1.12); } }
+/* animations off: plain numeric countdown + stepped bar */
+.dd-clock { display: grid; grid-template-columns: auto auto; align-items: baseline; justify-content: end; column-gap: 2px; width: 72px; flex: none; }
+.dd-clock-n { font-size: 28px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; } .dd-clock-u { font-weight: 700; color: #555b63; }
+.dd-clock-bar { grid-column: 1 / -1; height: 6px; margin-top: 4px; background: #e3e9ef; border-radius: 3px; overflow: hidden; }
+.dd-clock-bar i { display: block; height: 100%; background: var(--dd-acc); transform-origin: left; }
+.dd-clock.low .dd-clock-n { color: #a12a1e; } .dd-clock.low .dd-clock-bar i { background: #c0392b; }
 
 /* rarity bar */
 .dd-rbar { display: inline-flex; align-items: center; gap: 6px; width: 100%; max-width: 180px; }
 .dd-rbar .trk { flex: 1; height: 8px; border-radius: 4px; background: #eef2f5; overflow: hidden; }
-.dd-rbar i { display: block; height: 100%; border-radius: 4px; min-width: 6px; }
+.dd-rbar i { display: block; height: 100%; border-radius: 4px; transform-origin: left; transform: scaleX(var(--f)); animation: dd-grow 700ms cubic-bezier(.22, 1, .36, 1) both; }
+@keyframes dd-grow { from { transform: scaleX(0); } }
+.dd .coach-bar i { width: 100% !important; transform-origin: left; transform: scaleX(var(--f)); transition: none; animation: dd-grow 700ms cubic-bezier(.22, 1, .36, 1) both; }
 .dd-rbar b { font-size: 12px; font-variant-numeric: tabular-nums; min-width: 22px; text-align: right; }
 .dd-rbar.t-shallow i { background: #7fb7d9; } .dd-rbar.t-mid i { background: #2f7fc0; } .dd-rbar.t-deep i { background: #1a4f96; } .dd-rbar.t-abyss i { background: #5b2a8c; }
 
@@ -94,9 +112,9 @@
 .dd-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 10px 0; }
 @media (max-width: 420px) { .dd-cards { grid-template-columns: 1fr 1fr; } }
 .dd-flip { perspective: 800px; background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; height: 116px; text-align: left; }
-.dd-flip-in { position: relative; display: block; width: 100%; height: 100%; transition: transform .5s cubic-bezier(.3,.7,.3,1); transform-style: preserve-3d; }
+.dd-flip-in { position: relative; display: block; width: 100%; height: 100%; transition: transform 420ms cubic-bezier(.45, 0, .55, 1); transform-style: preserve-3d; will-change: transform; transform: rotateY(0deg); }
 .dd-flip.on .dd-flip-in { transform: rotateY(180deg); }
-.dd-face { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 12px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; border: 1px solid #c9d3dd; overflow: hidden; }
+.dd-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 12px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; border: 1px solid #c9d3dd; overflow: hidden; }
 .dd-face.front { background: linear-gradient(160deg, #0b4f8a, #062a52); color: #fff; } .dd-face.front .dd-rbar b { color: #fff; } .dd-face.front .dd-rbar .trk { background: rgba(255,255,255,.22); } .dd-face.front .dd-rbar i { background: #9fd3f2; }
 .dd-face.back { background: #fff; transform: rotateY(180deg); }
 .dd-flip.missed .dd-face.back { border: 2px solid #c0392b; background: #fff3f1; } .dd-flip.mine .dd-face.back { border: 2px solid #2e7d32; background: #f0faf0; }
@@ -139,7 +157,11 @@
 .dd-modal { position: fixed; inset: 0; background: rgba(2,10,24,.6); display: grid; place-items: center; z-index: 80; padding: 16px; }
 .dd-modal-card { background: #fff; border-radius: 18px; padding: 22px; max-width: 420px; width: 100%; text-align: center; }
 .dd-modal-card h2 { margin: 8px 0; } .dd-modal-card p { color: #2a3340; line-height: 1.45; } .dd-modal-card .dd-row { justify-content: center; }
-.dd-step-icon { font-size: 52px; animation: dd-bob 2.4s ease-in-out infinite; }
+.dd-step-icon { font-size: 52px; animation: dd-bob 2.6s ease-in-out infinite; }
 .dd-dots { display: flex; justify-content: center; gap: 6px; margin: 10px 0; } .dd-dots i { width: 8px; height: 8px; border-radius: 50%; background: #c9d3dd; } .dd-dots i.on { background: var(--dd-acc); }
 .dd-feedback .coach-why { color: #3d4550; } .dd-feedback .coach-top { cursor: default; }
-@media (prefers-reduced-motion: reduce) { .dd-diver, .dd-step-icon, .dd-bubbles i, .dd-ring.low span, .shake { animation: none !important; } .dd-flip-in { transition: none; } }
+/* Animations Off (header toggle; defaults to Off when the OS asks for reduced motion): no motion at all. */
+.dd-still *, .dd-still *::before, .dd-still *::after { animation: none !important; transition: none !important; }
+.dd-still .dd-bubbles { display: none; }
+.dd-anim-btn { white-space: nowrap; }
+@media (max-width: 520px) { .dd-anim-btn .long { display: none; } }
