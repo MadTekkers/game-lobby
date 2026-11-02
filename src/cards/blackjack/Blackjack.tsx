@@ -17,6 +17,9 @@ import { bjTips } from "./tutor";
 import { handValue, basicStrategy, sameValue, ACTION_LABEL, type Action } from "./strategy";
 import type { PublicBJ } from "./engine";
 import { runCoach, Replay, type CoachResult } from "./coach";
+import { bjRows, bjDecision, bjWhy, BJ_LABEL, type BjInput } from "./review";
+import { useCoachLevel, useDecisionFlow, useHandId, tableMode, GuidedHint, Checking, CatchPrompt, AfterNote, ReviewButton, CoachBar } from "../coach/CoachUI";
+import type { Row } from "./sim";
 import "../cards.css";
 import "../table.css";
 
@@ -136,6 +139,23 @@ export default function BlackjackPage({ params }: { params: URLSearchParams }) {
 
   const play = (a: Action) => { beep("tap"); setHintOn(false); if (train) coachAfter(a); else setCoach(null); T.act({ t: a }); };
   const insure = (take: boolean) => { if (train) coachAfter(take ? "insure" : "noinsure"); T.act({ t: "insurance", take }); };
+  // coach levels, hand review + drills: every decision of yours is scored with the same simulation as the Train card
+  const mode = tableMode({ tutorial, live, train });
+  const [level] = useCoachLevel("blackjack");
+  const hid = useHandId(room, pub?.round);
+  type Mv = Row["action"];
+  const dkey = myTurn && hand && me ? `${pub!.round}|${pub!.turn!.hand}|${hand.cards.length}|${me.hands.length}` : insuranceNow ? `${pub!.round}|ins` : null;
+  const flow = useDecisionFlow<{ rows: Row[]; input: BjInput; step: string; round: number }, Mv>({
+    game: "blackjack", mode, level, dkey,
+    analyze: () => { if (!pub || !me || !(myTurn || insuranceNow)) return null; const input = coachInput() as BjInput;
+      const step = insuranceNow ? "Insurance" : me.hands.length > 1 ? `Split hand ${pub.turn!.hand + 1}, card ${hand!.cards.length}` : hand!.cards.length === 2 ? "First move" : `After ${hand!.cards.length - 2} hit${hand!.cards.length > 3 ? "s" : ""}`;
+      return { rows: bjRows(input), input, step, round: pub.round }; },
+    decide: (e, m, caught) => bjDecision({ input: e.input, rows: e.rows, chosen: m, hand: hid(e.round), handLabel: `Blackjack · round ${e.round}`, step: e.step, caught }),
+    hint: (e) => ({ key: e.rows[0].action, label: BJ_LABEL[e.rows[0].action], why: bjWhy(e.rows[0], e.rows, e.input) }),
+    send: (m) => (m === "insure" ? insure(true) : m === "noinsure" ? insure(false) : play(m)),
+  });
+  const holdOn = flow.checking || !!flow.prompt;
+  const guideKey = flow.hint?.key;
   const askHint = () => { setHintOn(true); T.hint(); coachAfter(null); };
   const placeBet = () => { const a = Math.max(pub!.minBet, Math.min(bet, pub!.maxBet, me!.stack)); localStorage.setItem("bj_bet", String(a)); setCoach(null); T.act({ t: "bet", amount: a }); };
   const newTable = () => go(gameUrl({ game: "blackjack", mode: live ? "live" : "solo", seats, bot, train: train ? 1 : undefined, tut: tutorial ? 1 : undefined }) + `&n=${Date.now()}`);
@@ -200,10 +220,10 @@ export default function BlackjackPage({ params }: { params: URLSearchParams }) {
   // you're always at the bottom centre: the action tray sits directly above your active hand (inside it, so it follows split hands)
   const actsInner = (myTurn || insuranceNow) && me && (insuranceNow ? (<>
         <span className="bj-acts-l">Insurance {Math.floor(me.bet / 2)}?</span>
-        <button className="pill act ins" disabled={T.busy} onClick={() => insure(true)}>Take insurance</button>
-        <button className="pill act no" disabled={T.busy} onClick={() => insure(false)}>No thanks</button>
+        <button className={`pill act ins ${guideKey === "insure" ? "hinted" : ""}`} disabled={T.busy || holdOn} onClick={() => flow.choose("insure")}>Take insurance</button>
+        <button className={`pill act no ${guideKey === "noinsure" ? "hinted" : ""}`} disabled={T.busy || holdOn} onClick={() => flow.choose("noinsure")}>No thanks</button>
       </>) : (<>
-        {(["hit", "stand", "double", "split"] as Action[]).filter((a) => legal.includes(a) || a === "hit" || a === "stand").map((a) => <button key={a} className={`pill act ${a} ${hintOn && basic === a ? "hinted" : ""}`} disabled={T.busy || !legal.includes(a)} onClick={() => play(a)}>{ACTION_LABEL[a]}</button>)}
+        {(["hit", "stand", "double", "split"] as Action[]).filter((a) => legal.includes(a) || a === "hit" || a === "stand").map((a) => <button key={a} className={`pill act ${a} ${(hintOn && basic === a) || guideKey === a ? "hinted" : ""}`} disabled={T.busy || holdOn || !legal.includes(a)} onClick={() => flow.choose(a)}>{ACTION_LABEL[a]}</button>)}
         <button className="pill act hint" disabled={T.busy} onClick={askHint} aria-label="Hint" title="Hint">💡</button>
         {hintOn && basic && <span className="bj-acts-l">Basic strategy: <b>{ACTION_LABEL[basic]}</b>{secsLeft !== null && ` · ${secsLeft}s`}</span>}
       </>));
@@ -267,6 +287,8 @@ export default function BlackjackPage({ params }: { params: URLSearchParams }) {
           <ReplayBar replaying={T.replaying} skip={T.skip} />
           {T.err && <p className="warn center">{T.err}</p>}
           <div className="bj-controls">
+            <GuidedHint flow={flow} /><Checking flow={flow} /><CatchPrompt flow={flow} /><AfterNote flow={flow} />
+            {pub.phase === "betting" && pub.round > 1 && <div className="center"><ReviewButton game="blackjack" hand={hid(pub.round - 1)}>Review last hand</ReviewButton></div>}
             {!me && (T.pending >= 0 ? <p className="muted center">You'll take over seat {T.pending + 1} when this hand ends.</p> : <p className="muted center">Table is full — you're watching. A seat opens when a bot's spot frees up.</p>)}
             {me && pub.phase === "betting" && !me.decided && (
               <div className="bet-box">
@@ -289,6 +311,7 @@ export default function BlackjackPage({ params }: { params: URLSearchParams }) {
             {live && me && <button className="pill ghost sm" onClick={() => { T.leave(); go("/"); }}>Leave table</button>}
             <span className="muted tiny">Table {room} · {bot} bots · round {pub.round}</span>
           </div>
+          <CoachBar game="blackjack" mode={mode} />
           <details className="bj-log"><summary className="muted small">Table log</summary>{pub.log.slice().reverse().map((e, i) => <div key={i} className="tiny muted">{e.text || (e.card ? `${e.t === "dealer" ? "Dealer" : pub.seats[e.seat ?? 0]?.name} draws ${e.card}` : e.t)}</div>)}</details>
         </div>
         {panel}

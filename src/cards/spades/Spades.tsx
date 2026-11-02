@@ -15,7 +15,10 @@ import * as Sim from "./sim";
 import type { PublicSp, PrivateSp } from "./engine";
 import { knownHs, type View } from "./coach";
 import { coachPlay, coachBid, tipsPlay, tipsBid, bidLabel, type Coached } from "./coachView";
+import { spPlayEval, spBidEval, spPlayDecision, spBidDecision, spHint, type SpPlayEval, type SpBidEval } from "./review";
+import { useCoachLevel, useDecisionFlow, useHandId, tableMode, GuidedHint, Checking, CatchPrompt, AfterNote, ReviewButton, CoachBar } from "../coach/CoachUI";
 import "../cards.css";
+type Mv = { kind: "play"; card: Card } | { kind: "bid"; bid: number; nil: number };
 
 const VNAME: Record<Sim.Variant, string> = { partners: "Partnership", cutthroat: "Cutthroat", draw: "Two-hand draw" };
 const short = (n: string) => n.replace(" 🤖", "");
@@ -52,7 +55,7 @@ export default function SpadesPage({ params }: { params: URLSearchParams }) {
 
   // hand summary pops when a hand ends; game-over feedback
   const lastNo = useRef(-1);
-  useEffect(() => { if (!pub?.lastHand) return; if (lastNo.current >= 0 && pub.lastHand.handNo !== lastNo.current) { setShowSum(true); const d = pub.lastHand.score.points[myTeam] ?? 0; beep(d >= 0 ? "good" : "bad"); } lastNo.current = pub.lastHand.handNo; }, [pub?.lastHand?.handNo]);
+  useEffect(() => { if (!pub) return; if (!pub.lastHand) { lastNo.current = Math.max(lastNo.current, 0); return; } if (lastNo.current >= 0 && pub.lastHand.handNo !== lastNo.current) { setShowSum(true); const d = pub.lastHand.score.points[myTeam] ?? 0; beep(d >= 0 ? "good" : "bad"); } lastNo.current = pub.lastHand.handNo; }, [pub?.lastHand?.handNo, !!pub]);
   const lastPhase = useRef("");
   useEffect(() => { if (!pub) return; if (pub.phase === "gameover" && lastPhase.current && lastPhase.current !== "gameover" && pub.winner?.includes(myTeam)) confetti(); lastPhase.current = pub.phase; }, [pub?.phase]);
   // lobby start: once everyone from the lobby is seated, deal
@@ -87,6 +90,21 @@ export default function SpadesPage({ params }: { params: URLSearchParams }) {
     else if (pub.phase === "bidding") { const c = coachBid(view, seat, hand, null, deck, false); const b = c.raw[0]; setHint(b.nil ? "0" : String(b.bid)); setCoach(c); }
   };
   const newTable = () => go(gameUrl(urlOpts) + `&n=${Date.now()}`);
+  // coach levels, hand review + drills (your own decisions only, scored with the Train-mode simulation)
+  const mode = tableMode({ tutorial, live, train });
+  const [level] = useCoachLevel("spades");
+  const hid = useHandId(room, pub?.handNo);
+  const canCoach = myTurn && !!hand && !!view && !!pub && hand.length === pub.counts[seat] && (pub.phase === "play" || pub.phase === "bidding");
+  const flow = useDecisionFlow<(SpPlayEval | SpBidEval) & { no: number }, Mv>({
+    game: "spades", mode, level, dkey: canCoach ? decisionKey : null,
+    analyze: () => { if (!canCoach) return null; const e = pub!.phase === "bidding" ? spBidEval(view!, seat, hand!.slice(), deck) : spPlayEval(view!, seat, hand!.slice(), deck); return { ...e, no: pub!.handNo }; },
+    decide: (e, m, caught) => { const c = { hand: hid(e.no), handLabel: `Spades · hand ${e.no}` };
+      return e.kind === "play" ? spPlayDecision(e, (m as { card: Card }).card, c, caught?.kind === "play" ? caught.card : undefined) : spBidDecision(e, m as { bid: number; nil: number }, c, caught?.kind === "bid" ? caught : undefined); },
+    hint: spHint,
+    send: (m) => (m.kind === "play" ? playCard(m.card) : bid(m.bid)),
+  });
+  const holdOn = flow.checking || !!flow.prompt;
+  const guide = flow.hint?.key ?? null;
 
   if (!pub) return <div className="game trk"><GameHeader title="Spades" game="spades" room={live ? room : null} status="connecting" /><p className="center muted">{T.err || "Shuffling…"}</p></div>;
 
@@ -124,7 +142,7 @@ export default function SpadesPage({ params }: { params: URLSearchParams }) {
         )}
         {seat >= 0 && pub.phase !== "waiting" && (
           <div className="tt-me"><div className="tt-who center"><Avatar name={getPlayer()} size={22} /> <b>You</b> <span className="tiny">{seatLine(seat)}</span> <span className="stack tiny">🪙 {me?.stack.toLocaleString()}</span></div>
-            {hand ? <HandFan cards={hand} legal={legal} onPick={myTurn && pub.phase === "play" ? playCard : undefined} disabled={T.busy} hinted={hint && hint.length === 2 ? hint : null} /> : priv?.blindOffer ? <div className="center"><PlayingCard card={null} /></div> : null}
+            {hand ? <HandFan cards={hand} legal={legal} onPick={myTurn && pub.phase === "play" ? (c) => flow.choose({ kind: "play", card: c }) : undefined} disabled={T.busy || holdOn} hinted={hint && hint.length === 2 ? hint : pub.phase === "play" && guide && guide.length === 2 ? guide : null} /> : priv?.blindOffer ? <div className="center"><PlayingCard card={null} /></div> : null}
           </div>)}
       </div>
       <ReplayBar replaying={T.replaying} skip={T.skip} />
@@ -136,6 +154,7 @@ export default function SpadesPage({ params }: { params: URLSearchParams }) {
       {thinking && !tutorial && <p className="muted tiny center">Simulating…</p>}
 
       <div className="bj-controls">
+        <GuidedHint flow={flow} what={pub.phase === "bidding" ? "bid" : "card"} /><Checking flow={flow} /><CatchPrompt flow={flow} /><AfterNote flow={flow} />
         {seat < 0 && pub.phase !== "waiting" && (T.pending >= 0 ? <p className="muted center">You'll take over seat {T.pending + 1} when this hand ends.</p> : <p className="muted center">Table is full — you're watching.</p>)}
         {myTurn && pub.phase === "draw" && priv?.peek && (<div className="center">
           <p>Top of the stock:</p><div className="center" style={{ display: "flex", justifyContent: "center" }}><PlayingCard card={priv.peek} /></div>
@@ -146,7 +165,7 @@ export default function SpadesPage({ params }: { params: URLSearchParams }) {
           <div className="controls"><button className="pill" disabled={T.busy} onClick={() => bid(0, true)}>Blind nil</button><button className="pill ghost" disabled={T.busy} onClick={() => T.act({ t: "look" })}>Look at my cards</button></div></div>)}
         {myTurn && pub.phase === "bidding" && hand && (<div>
           <p className="center small">How many tricks will you take? {pub.v === "partners" ? "(your bid adds to your partner's)" : ""}</p>
-          <div className="bidpad">{Array.from({ length: hs + 1 }, (_, n) => <button key={n} className={`${n === 0 ? "nil" : ""} ${hint === String(n) ? "hinted" : ""}`} disabled={T.busy} onClick={() => bid(n)}>{n === 0 ? "Nil" : n}</button>)}</div>
+          <div className="bidpad">{Array.from({ length: hs + 1 }, (_, n) => <button key={n} className={`${n === 0 ? "nil" : ""} ${hint === String(n) || guide === (n === 0 ? "nil" : String(n)) ? "hinted" : ""}`} disabled={T.busy || holdOn} onClick={() => flow.choose({ kind: "bid", bid: n, nil: n === 0 ? 1 : 0 })}>{n === 0 ? "Nil" : n}</button>)}</div>
         </div>)}
         {myTurn && (pub.phase === "play" || pub.phase === "bidding") && hand && <div className="controls"><button className="pill ghost sm" disabled={T.busy} onClick={askHint}>💡 Hint</button></div>}
         {pub.phase === "gameover" && (<div className="center">
@@ -162,6 +181,7 @@ export default function SpadesPage({ params }: { params: URLSearchParams }) {
             <tbody>{teams.map((t) => { const ss = pub.seats.map((_, i) => i).filter((i) => Sim.teamOf(pub.v, i) === t);
               return <tr key={t}><td>{teamLabel(t)}</td><td>{ss.map((i) => (LH.nil[i] ? (LH.nil[i] === 2 ? "BN" : "N") : LH.bids[i])).join("+")}</td><td>{ss.map((i) => LH.tricks[i]).join("+")}</td><td>{LH.score.points[t] >= 0 ? "+" : ""}{LH.score.points[t]}{LH.penalties[t] ? ` −${LH.penalties[t] * 100}` : ""}</td><td>{LH.score.bags[t]}</td><td><b>{LH.totals[t]}</b></td></tr>; })}</tbody></table>
           {LH.score.nilOk.some((x) => x !== null) && <p className="tiny muted">{LH.score.nilOk.map((x, i) => (x === null ? null : `${names[i]}'s nil ${x ? "made" : "failed"}`)).filter(Boolean).join(" · ")}</p>}
+          <div className="center" style={{ marginTop: 6 }}><ReviewButton game="spades" hand={hid(LH.handNo)} /></div>
         </div>)}
 
       {!coach && train && <p className="muted small center">🎓 Train mode: after each bid and card, a coach card compares your move with the best alternatives.</p>}
@@ -172,6 +192,7 @@ export default function SpadesPage({ params }: { params: URLSearchParams }) {
         {live && me && <button className="pill ghost sm" onClick={() => { T.leave(); go("/"); }}>Leave table</button>}
         <span className="muted tiny">Table {room} · {bot} bots{tutorial ? " · tutorial" : ""}</span>
       </div>
+      <CoachBar game="spades" mode={mode} />
       <details className="bj-log"><summary className="muted small">Table log</summary>{pub.log.slice().reverse().map((e, i) => <div key={i} className="tiny muted">{e.text}</div>)}</details>
       <p className="muted tiny center">{bidLabel({ bid: 0, nil: 1 })} = take no tricks (±100) · 10 bags = −100 · <a href="https://www.pagat.com/auctionwhist/spades.html" target="_blank" rel="noreferrer">rules</a></p>
     </div>

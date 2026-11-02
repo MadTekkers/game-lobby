@@ -19,6 +19,8 @@ import { chipStack, flyChips, dealBusyFor, type Fly } from "../ui/fly";
 import { tally, showdownOdds, describeNow } from "./tally";
 import { LearnCards, TERMS, contextTerm } from "./learn";
 import { seededRng } from "../core";
+import { hoEval, hoDecision, hoHint, hoHas, type HoEval } from "./review";
+import { useCoachLevel, useDecisionFlow, useHandId, tableMode, GuidedHint, Checking, CatchPrompt, AfterNote, ReviewButton, CoachBar } from "../coach/CoachUI";
 import "../cards.css";
 import "../table.css";
 
@@ -102,11 +104,27 @@ export default function HoldemPage({ params }: { params: URLSearchParams }) {
     const rows = tally(holes, pub.board); const od = showdownOdds(holes, pub.board, 2500, seededRng(pub.handNo * 31 + pub.board.length));
     return { rows, ...od };
   }, [oddsKey]);
-  // solo: deal the next hand automatically after a short look at the result (unless a coach card is open)
+  // coach levels, hand review + drills (your own decisions only, scored with the Train-mode simulation)
+  const mode = tableMode({ tutorial, live, train });
+  const [level] = useCoachLevel("holdem");
+  const hid = useHandId(room, pub?.handNo);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const flow = useDecisionFlow<HoEval & { no: number }, Move>({
+    game: "holdem", mode, level, dkey: myTurn ? decisionKey : null,
+    analyze: (m) => { const s = spot(); return s && pub ? { ...hoEval(s, m), no: pub.handNo } : null; },
+    covers: (e, m) => hoHas(e, m),
+    decide: (e, m, caught) => hoDecision(e, m, { hand: hid(e.no), handLabel: `Hold'em · hand ${e.no}` }, caught),
+    hint: hoHint,
+    send: (m) => doAct(m),
+  });
+  const holdOn = flow.checking || !!flow.prompt;
+  const guide = flow.hint?.key ?? null;
+  useEffect(() => { if (guide && guide[0] === "r") setAmt(Number(guide.slice(1))); }, [guide]);
+  // solo: deal the next hand automatically after a short look at the result (unless a coach card or the hand review is open)
   useEffect(() => {
-    if (!pub || live || pub.phase !== "handover" || !me || me.chips < pub.bb || coach) return;
+    if (!pub || live || pub.phase !== "handover" || !me || me.chips < pub.bb || coach || reviewOpen || flow.note) return;
     const t = setTimeout(() => T.act({ t: "next" }), tutorial ? 6000 : 3200); return () => clearTimeout(t);
-  }, [pub?.phase, pub?.handNo, !!coach]);
+  }, [pub?.phase, pub?.handNo, !!coach, reviewOpen, !!flow.note]);
 
   const doAct = (m: Move) => {
     beep("tap"); const s = spot();
@@ -235,19 +253,20 @@ export default function HoldemPage({ params }: { params: URLSearchParams }) {
       {thinking && !tutorial && !train && <p className="muted tiny center">Simulating…</p>}
 
       <div className="bj-controls">
+        <GuidedHint flow={flow} /><Checking flow={flow} /><CatchPrompt flow={flow} /><AfterNote flow={flow} />
         {seat < 0 && pub.phase !== "waiting" && (T.pending >= 0 ? <p className="muted center">You'll take over seat {T.pending + 1} when this hand ends.</p> : <p className="muted center">Table is full — you're watching.</p>)}
         {myTurn && (<div className="pk-actions">
           <div className="controls">
-            {toCall > 0 ? <button className={`pill ghost ${hintKey === "fold" ? "hinted" : ""}`} disabled={T.busy} onClick={() => doAct({ t: "fold" })}>Fold</button> : null}
-            {toCall > 0 ? <button className={`pill ${hintKey === "call" ? "hinted" : ""}`} disabled={T.busy} onClick={() => doAct({ t: "call" })}>{toCall >= (me?.chips ?? 0) ? `Call all-in ${me?.chips}` : `Call ${toCall}`}</button>
-              : <button className={`pill ${hintKey === "check" ? "hinted" : ""}`} disabled={T.busy} onClick={() => doAct({ t: "check" })}>Check</button>}
+            {toCall > 0 ? <button className={`pill ghost ${hintKey === "fold" || guide === "fold" ? "hinted" : ""}`} disabled={T.busy || holdOn} onClick={() => flow.choose({ t: "fold" })}>Fold</button> : null}
+            {toCall > 0 ? <button className={`pill ${hintKey === "call" || guide === "call" ? "hinted" : ""}`} disabled={T.busy || holdOn} onClick={() => flow.choose({ t: "call" })}>{toCall >= (me?.chips ?? 0) ? `Call all-in ${me?.chips}` : `Call ${toCall}`}</button>
+              : <button className={`pill ${hintKey === "check" || guide === "check" ? "hinted" : ""}`} disabled={T.busy || holdOn} onClick={() => flow.choose({ t: "check" })}>Check</button>}
             <button className="pill ghost sm" disabled={T.busy} onClick={askHint}>💡 Hint</button>
           </div>
           {pub.canRaise && maxTo > pub.maxBet && (<div className="pk-raise">
             <input type="range" min={minTo} max={maxTo} step={pub.bb / 2} value={Math.min(maxTo, Math.max(minTo, amt))} onChange={(e) => setAmt(Number(e.target.value))} aria-label="Raise amount" />
             <div className="controls">
               {[["Min", minTo], ["½ pot", preset(0.5)], ["Pot", preset(1)], ["All-in", maxTo]].map(([l, v]) => <button key={l as string} className="pill ghost sm" onClick={() => setAmt(v as number)}>{l}</button>)}
-              <button className={`pill ${hintKey === k({ t: "raise", to: amt }) ? "hinted" : ""}`} disabled={T.busy} onClick={() => doAct({ t: "raise", to: Math.min(maxTo, Math.max(minTo, amt)) })}>{amt >= maxTo ? `All-in ${maxTo}` : `${word} ${Math.min(maxTo, Math.max(minTo, amt))}`}</button>
+              <button className={`pill ${hintKey === k({ t: "raise", to: amt }) || guide === k({ t: "raise", to: amt }) ? "hinted" : ""}`} disabled={T.busy || holdOn} onClick={() => flow.choose({ t: "raise", to: Math.min(maxTo, Math.max(minTo, amt)) })}>{amt >= maxTo ? `All-in ${maxTo}` : `${word} ${Math.min(maxTo, Math.max(minTo, amt))}`}</button>
             </div></div>)}
           {hintKey && <p className="tiny center">Hint: <b>{coach?.raw[0]?.label}</b> is best here.</p>}
         </div>)}
@@ -255,6 +274,7 @@ export default function HoldemPage({ params }: { params: URLSearchParams }) {
           <div className={`bj-banner ${(LH.net[seat] ?? 0) > 0 ? "good" : (LH.net[seat] ?? 0) < 0 ? "bad" : ""}`}>{seat >= 0 && LH.net[seat] ? `${LH.net[seat] > 0 ? "+" : "−"}${Math.abs(LH.net[seat])} chips` : "Hand over"}</div>
           {LH.shown.length > 0 && <div className="pk-shown">{LH.shown.map((x) => <div key={x.seat} className={`replay-line ${LH.winners.includes(x.seat) ? "won" : ""}`}><span className="small">{names[x.seat]}</span><CardRow cards={x.hole} small /><span className="tiny">{x.desc}</span></div>)}</div>}
           {LH.pots.length > 1 && <p className="tiny muted">{LH.pots.map((p, j) => `${p.refund ? "Returned" : j === 0 ? "Main pot" : `Side pot ${j}`} ${p.amount} → ${p.winners.map((w) => names[w]).join(" & ")}`).join(" · ")}</p>}
+          <div className="center" style={{ margin: "6px 0" }}><ReviewButton game="holdem" hand={hid(LH.handNo)} onOpen={setReviewOpen} /></div>
           <div className="controls">
             {me && me.chips < pub.bb ? <button className="pill" disabled={T.busy} onClick={() => T.act({ t: "rebuy" })}>Rebuy {Math.min(pub.buyIn, me.stack)}</button>
               : me && <button className="pill" disabled={T.busy} onClick={() => T.act({ t: "next" })}>Next hand</button>}
@@ -271,6 +291,7 @@ export default function HoldemPage({ params }: { params: URLSearchParams }) {
         {live && me && <button className="pill ghost sm" onClick={() => { T.leave(); go("/"); }}>Leave table</button>}
         <span className="muted tiny">Table {room} · {bot} bots{tutorial ? " · tutorial" : ""}</span>
       </div>
+      <CoachBar game="holdem" mode={mode} />
       <details className="bj-log"><summary className="muted small">Table log</summary>{pub.log.slice().reverse().map((e, i) => <div key={i} className="tiny muted">{e.text}</div>)}</details>
       <p className="muted tiny center">No-limit · blinds {pub.sb}/{pub.bb} · min raise = last raise · side pots for all-ins · <a href="https://www.pokernews.com/poker-rules/texas-holdem.htm" target="_blank" rel="noreferrer">rules</a></p>
       </div>

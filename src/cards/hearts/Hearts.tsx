@@ -15,7 +15,10 @@ import * as Sim from "./sim";
 import type { PublicHt, PrivateHt } from "./engine";
 import { knownHs, type View } from "./coach";
 import { coachPlay, coachPass, tipsPlay, tipsPass, type Coached } from "./coachView";
+import { hePlayEval, hePassEval, hePlayDecision, hePassDecision, heHint, hasPass, type HePlayEval, type HePassEval } from "./review";
+import { useCoachLevel, useDecisionFlow, useHandId, tableMode, GuidedHint, Checking, CatchPrompt, AfterNote, ReviewButton, CoachBar } from "../coach/CoachUI";
 import "../cards.css";
+type Mv = { kind: "play"; card: Card } | { kind: "pass"; cards: Card[] };
 
 const VNAME: Record<Sim.Variant, string> = { four: "Four-hand", three: "Three-hand (2♦ out)", two: "Two-hand (stock)" };
 const short = (n: string) => n.replace(" 🤖", "");
@@ -54,7 +57,7 @@ export default function HeartsPage({ params }: { params: URLSearchParams }) {
   useEffect(() => { setSel([]); }, [pub?.handNo, pub?.phase]);
 
   const lastNo = useRef(-1);
-  useEffect(() => { if (!pub?.lastHand) return; if (lastNo.current >= 0 && pub.lastHand.handNo !== lastNo.current) { setShowSum(true); beep((pub.lastHand.points[seat] ?? 0) <= 3 ? "good" : "bad"); } lastNo.current = pub.lastHand.handNo; }, [pub?.lastHand?.handNo]);
+  useEffect(() => { if (!pub) return; if (!pub.lastHand) { lastNo.current = Math.max(lastNo.current, 0); return; } if (lastNo.current >= 0 && pub.lastHand.handNo !== lastNo.current) { setShowSum(true); beep((pub.lastHand.points[seat] ?? 0) <= 3 ? "good" : "bad"); } lastNo.current = pub.lastHand.handNo; }, [pub?.lastHand?.handNo, !!pub]);
   const lastPhase = useRef("");
   useEffect(() => { if (!pub) return; if (pub.phase === "gameover" && lastPhase.current && lastPhase.current !== "gameover" && pub.winner?.includes(seat)) confetti(); lastPhase.current = pub.phase; }, [pub?.phase]);
   useAutoStart(T, expect, pub);
@@ -78,8 +81,8 @@ export default function HeartsPage({ params }: { params: URLSearchParams }) {
   };
   const playCard = (c: Card) => { beep("tap"); if (train) runPlayCoach(c); else setCoach(null); T.act({ t: "play", card: c }); };
   const toggle = (c: Card) => { beep("tap"); setSel((s) => (s.includes(c) ? s.filter((x) => x !== c) : s.length >= 3 ? [...s.slice(1), c] : [...s, c])); };
-  const doPass = () => {
-    if (!pub || !hand || sel.length !== 3) return; const cards = sel.slice();
+  const doPass = (cards: Card[]) => {
+    if (!pub || !hand || cards.length !== 3) return;
     if (train) { const h = hand.slice(), v = pub.v, n = pub.n, off = pub.passOff; setThinking(true); setTimeout(() => { try { setCoach(coachPass(v, n, seat, h, off, cards)); } catch (e) { console.warn(e); } setThinking(false); }, 30); } else setCoach(null);
     T.act({ t: "pass", cards });
   };
@@ -89,6 +92,24 @@ export default function HeartsPage({ params }: { params: URLSearchParams }) {
     else if (pub.phase === "play" && hand.length === pub.counts[seat]) { const c = coachPlay(view, seat, hand, null, given); setHint(c.raw[0] ? [c.raw[0].card] : null); setCoach(c); }
   };
   const newTable = () => go(gameUrl(urlOpts) + `&n=${Date.now()}`);
+  // coach levels, hand review + drills (your own decisions only, scored with the Train-mode simulation)
+  const mode = tableMode({ tutorial, live, train });
+  const [level] = useCoachLevel("hearts");
+  const hid = useHandId(room, pub?.handNo);
+  const canPlay = myTurn && !!pub && pub.phase === "play" && !!hand && !!view && hand.length === pub.counts[seat];
+  const flow = useDecisionFlow<(HePlayEval | HePassEval) & { no: number }, Mv>({
+    game: "hearts", mode, level, dkey: (mustPass && hand) || canPlay ? decisionKey : null,
+    analyze: (m) => { if (!pub || !hand) return null;
+      if (mustPass) return { ...hePassEval(pub.v, pub.n, seat, hand.slice(), pub.passOff, m?.kind === "pass" ? m.cards : undefined), no: pub.handNo };
+      return canPlay ? { ...hePlayEval(view!, seat, hand.slice(), given), no: pub.handNo } : null; },
+    covers: (e, m) => e.kind !== "pass" || m.kind !== "pass" || hasPass(e, m.cards),
+    decide: (e, m, caught) => { const c = { hand: hid(e.no), handLabel: `Hearts · hand ${e.no}` };
+      return e.kind === "play" ? hePlayDecision(e, (m as { card: Card }).card, c, caught?.kind === "play" ? caught.card : undefined) : hePassDecision(e, (m as { cards: Card[] }).cards, c, caught?.kind === "pass" ? caught.cards : undefined); },
+    hint: heHint,
+    send: (m) => (m.kind === "play" ? playCard(m.card) : doPass(m.cards)),
+  });
+  const holdOn = flow.checking || !!flow.prompt;
+  const guide = flow.hint ? flow.hint.key.split(",") : null;
 
   if (!pub) return <div className="game trk"><GameHeader title="Hearts" game="hearts" room={live ? room : null} status="connecting" /><p className="center muted">{T.err || "Shuffling…"}</p></div>;
 
@@ -123,10 +144,10 @@ export default function HeartsPage({ params }: { params: URLSearchParams }) {
         )}
         {seat >= 0 && pub.phase !== "waiting" && (
           <div className="tt-me hm-me"><div className="tt-who center"><Avatar name={getPlayer()} size={22} /> <b>You</b> <span className="tiny">{seatLine(seat)}</span> <span className="stack tiny">🪙 {me?.stack.toLocaleString()}</span></div>
-            {hand && <HandFan cards={hand} legal={mustPass ? null : legal} onPick={mustPass ? toggle : myTurn && pub.phase === "play" ? playCard : undefined} disabled={T.busy} hinted={hint} selected={mustPass ? sel : undefined} marked={pub.phase === "play" && pub.history.length === 0 ? priv?.received : undefined} />}
+            {hand && <HandFan cards={hand} legal={mustPass ? null : legal} onPick={mustPass ? toggle : myTurn && pub.phase === "play" ? (c) => flow.choose({ kind: "play", card: c }) : undefined} disabled={T.busy || holdOn} hinted={hint ?? guide} selected={mustPass ? sel : undefined} marked={pub.phase === "play" && pub.history.length === 0 ? priv?.received : undefined} />}
           </div>)}
       </div>
-      {pub.phase === "play" && pub.history.length === 0 && !!priv?.received?.length && <p className="center tiny muted">Received from {names[(seat - pub.passOff + pub.n) % pub.n]}: <CardRow cards={priv.received} small /> {priv.passed && <>· you passed <CardRow cards={priv.passed} small /></>}</p>}
+      {pub.phase === "play" && pub.history.length === 0 && !!priv?.received?.length && <div className="center tiny muted">Received from {names[(seat - pub.passOff + pub.n) % pub.n]}: <CardRow cards={priv.received} small /> {priv.passed && <>· you passed <CardRow cards={priv.passed} small /></>}</div>}
       <ReplayBar replaying={T.replaying} skip={T.skip} />
       {pub.lastTrick && <div className="lasttrick muted">Last trick: <CardRow cards={pub.lastTrick.cards} small /> → {names[pub.lastTrick.winner]}</div>}
       {T.err && <p className="warn center">{T.err}</p>}
@@ -136,9 +157,10 @@ export default function HeartsPage({ params }: { params: URLSearchParams }) {
       {thinking && !tutorial && <p className="muted tiny center">Simulating…</p>}
 
       <div className="bj-controls">
+        <GuidedHint flow={flow} what={mustPass ? "pass" : "card"} /><Checking flow={flow} /><CatchPrompt flow={flow} /><AfterNote flow={flow} />
         {seat < 0 && pub.phase !== "waiting" && (T.pending >= 0 ? <p className="muted center">You'll take over seat {T.pending + 1} when this hand ends.</p> : <p className="muted center">Table is full — you're watching.</p>)}
         {mustPass && <div className="hrt-pass"><p className="small">Pick 3 cards to pass to <b>{passToName}</b> ({sel.length}/3): {sel.map(cardName).join(" ")}</p>
-          <button className="pill" disabled={T.busy || sel.length !== 3} onClick={doPass}>Pass {Sim.passName(pub.n, pub.passOff)}</button></div>}
+          <button className="pill" disabled={T.busy || holdOn || sel.length !== 3} onClick={() => flow.choose({ kind: "pass", cards: sel.slice() })}>Pass {Sim.passName(pub.n, pub.passOff)}</button></div>}
         {pub.phase === "pass" && seat >= 0 && !mustPass && <p className="center muted small">You passed {priv?.passed?.map(cardName).join(" ")} — waiting for the others.</p>}
         {(mustPass || (myTurn && pub.phase === "play")) && hand && <div className="controls"><button className="pill ghost sm" disabled={T.busy} onClick={askHint}>💡 Hint</button></div>}
         {pub.phase === "gameover" && (<div className="center">
@@ -153,6 +175,7 @@ export default function HeartsPage({ params }: { params: URLSearchParams }) {
           <table><thead><tr><th></th><th>Taken</th><th>Points</th><th>Total</th></tr></thead>
             <tbody>{pub.seats.map((_, i) => <tr key={i}><td>{names[i]}</td><td>{LH.raw[i]}{LH.qs === i ? " (Q♠)" : ""}</td><td>{LH.points[i]}</td><td><b>{LH.totals[i]}</b></td></tr>)}</tbody></table>
           {LH.moon >= 0 && <p className="tiny">🌙 {names[LH.moon]} shot the moon — everyone else +26.</p>}
+          <div className="center" style={{ marginTop: 6 }}><ReviewButton game="hearts" hand={hid(LH.handNo)} /></div>
         </div>)}
 
       {!coach && train && <p className="muted small center">🎓 Train mode: after each pass and card, a coach card compares your move with the best alternatives.</p>}
@@ -163,6 +186,7 @@ export default function HeartsPage({ params }: { params: URLSearchParams }) {
         {live && me && <button className="pill ghost sm" onClick={() => { T.leave(); go("/"); }}>Leave table</button>}
         <span className="muted tiny">Table {room} · {bot} bots{tutorial ? " · tutorial" : ""}</span>
       </div>
+      <CoachBar game="hearts" mode={mode} />
       <details className="bj-log"><summary className="muted small">Table log</summary>{pub.log.slice().reverse().map((e, i) => <div key={i} className="tiny muted">{e.text}</div>)}</details>
       <p className="muted tiny center">♥ = 1 · Q♠ = 13 · all 26 = shoot the moon · lowest score at {pub.target} wins · <a href="https://www.pagat.com/reverse/hearts.html" target="_blank" rel="noreferrer">rules</a></p>
     </div>
