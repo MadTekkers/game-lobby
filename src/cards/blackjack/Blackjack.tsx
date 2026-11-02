@@ -33,6 +33,12 @@ const totalText = (cards: (string | null)[]) => {
  *  (dealer's left = your right) is preserved, only the view rotates. */
 const ARC: Record<number, number[]> = { 1: [90], 2: [90, 140], 3: [90, 140, 40], 4: [90, 135, 172, 40] };
 const spot = (i: number, n: number, vs = 0) => { const d = (i - vs + n) % n; const a = ((ARC[n] ?? ARC[4])[d] * Math.PI) / 180; return { x: 50 + 40 * Math.cos(a), y: 36 + 54 * Math.sin(a) }; };
+/** Felt print: concentric arcs around one point far above the table, so every line keeps the same spacing end to end. */
+const PC = { x: 500, y: -900 };
+const arc = (r: number, half: number) => { const t = half / r; const dx = r * Math.sin(t), y = PC.y + r * Math.cos(t);
+  return `M ${(PC.x - dx).toFixed(1)} ${y.toFixed(1)} A ${r} ${r} 0 0 0 ${(PC.x + dx).toFixed(1)} ${y.toFixed(1)}`; };
+const PRINT_ARCS = [{ id: "bjp1", d: arc(1010, 480) }, { id: "bjp2", d: arc(1070, 400) }, { id: "bjp3", d: arc(1148, 380) }];
+const BAND_IN = arc(1100, 250), BAND_OUT = arc(1168, 262);
 const RESULT: Record<string, string> = { blackjack: "Blackjack!", win: "Win", push: "Push", lose: "Lose", bust: "Bust" };
 
 export default function BlackjackPage({ params }: { params: URLSearchParams }) {
@@ -224,11 +230,9 @@ export default function BlackjackPage({ params }: { params: URLSearchParams }) {
         <div key={dealKey} className="bj-dealer-cards">{pub.dealer.length ? <div className="pc-row">{shownDealer.map((c, z) => <PlayingCard key={pub.tutorial ? `${c}-${z}` : z} card={c} fly={dealerFly(z, z !== 1 || !pub.holeHidden || !!pub.tutorial)} />)}</div> : <div className="bj-empty">Place your bets</div>}</div>
         {dealerTotal && <div className="tot big">{pub.tutorial && pub.holeHidden && pub.tutDealer?.length ? `${dealerTotal} (+ hole ${totalText(pub.tutDealer)})` : dealerTotal}</div>}
       </div>
-      <svg className="bj-print" viewBox="0 0 1000 270" aria-label="Blackjack pays 3 to 2. Dealer must stand on all 17s. Insurance pays 2 to 1." role="img">
-        <defs>
-          <path id="bjp1" d="M 60 20 Q 500 250 940 20" /><path id="bjp2" d="M 150 70 Q 500 300 850 70" /><path id="bjp3" d="M 260 125 Q 500 325 740 125" />
-        </defs>
-        <path d="M 200 100 Q 500 294 800 100" className="band" /><path d="M 270 140 Q 500 330 730 140" className="band" />
+      <svg className="bj-print" viewBox="0 0 1000 300" aria-label="Blackjack pays 3 to 2. Dealer must stand on all 17s. Insurance pays 2 to 1." role="img">
+        <defs>{PRINT_ARCS.map((a) => <path key={a.id} id={a.id} d={a.d} />)}</defs>
+        <path d={BAND_IN} className="band" /><path d={BAND_OUT} className="band" />
         <text className="p1"><textPath href="#bjp1" startOffset="50%" textAnchor="middle">BLACKJACK PAYS 3 TO 2</textPath></text>
         <text className="p2"><textPath href="#bjp2" startOffset="50%" textAnchor="middle">Dealer must stand on all 17s</textPath></text>
         <text className="p3"><textPath href="#bjp3" startOffset="50%" textAnchor="middle">INSURANCE PAYS 2 TO 1</textPath></text>

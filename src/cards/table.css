@@ -63,10 +63,10 @@
 .bj-discard .tray i { display: block; width: 100%; background: repeating-linear-gradient(0deg, #fff 0 1px, #c9d3e6 1px 2px); border-radius: 1px; }
 .bj-print { position: absolute; left: 2%; width: 96%; top: 29.5%; color: #f9df6d; pointer-events: none; z-index: 0; overflow: visible; }
 .bj-print text { fill: currentColor; font-family: Georgia, serif; font-weight: 700; }
-.bj-print .p1 { font-size: 50px; letter-spacing: 4px; }
-.bj-print .p2 { font-size: 34px; fill: #f2f7f3; font-style: italic; font-weight: 400; }
+.bj-print .p1 { font-size: 44px; letter-spacing: 4px; }
+.bj-print .p2 { font-size: 33px; fill: #f2f7f3; font-style: italic; font-weight: 400; }
 .bj-print .p3 { font-size: 27px; letter-spacing: 3px; }
-.bj-print .band { fill: none; stroke: rgba(249,223,109,.55); stroke-width: 2.5; }
+.bj-print .band { fill: none; stroke: rgba(249,223,109,.55); stroke-width: 2.5; stroke-linecap: round; }
 .bjs { position: absolute; transform: translate(-50%, -100%); display: flex; flex-direction: column; align-items: center; gap: 3px; width: 86px; background: none !important; box-shadow: none !important; padding: 0 !important; z-index: 4; }
 .bjs.mine { width: 120px; z-index: 6; }
 .bjs .bj-hands { flex-wrap: nowrap; gap: 4px; margin: 0; min-height: 20px; }
